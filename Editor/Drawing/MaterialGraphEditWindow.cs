@@ -34,6 +34,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         ColorSpace m_ColorSpace;
         RenderPipelineAsset m_RenderPipelineAsset;
+        bool m_FrameAllAfterLayout;
 
         GraphEditorView m_GraphEditorView;
 
@@ -54,6 +55,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                     m_GraphEditorView.saveRequested += UpdateAsset;
                     m_GraphEditorView.convertToSubgraphRequested += ToSubGraph;
                     m_GraphEditorView.showInProjectRequested += PingAsset;
+                    m_GraphEditorView.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
                     this.GetRootVisualContainer().Add(graphEditorView);
                 }
             }
@@ -209,7 +211,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         public void ToSubGraph()
         {
-            var path = EditorUtility.SaveFilePanelInProject("Save subgraph", "New SubGraph", "ShaderSubGraph", "");
+            var path = EditorUtility.SaveFilePanelInProject("Save subgraph", "New SubGraph", ShaderSubGraphImporter.Extension, "");
             path = path.Replace(Application.dataPath, "Assets");
             if (path.Length == 0)
                 return;
@@ -480,13 +482,18 @@ namespace UnityEditor.ShaderGraph.Drawing
 
                 var path = AssetDatabase.GetAssetPath(asset);
                 var extension = Path.GetExtension(path);
+                if (extension == null)
+                    return;
+                // Path.GetExtension returns the extension prefixed with ".", so we remove it. We force lower case such that
+                // the comparison will be case-insensitive.
+                extension = extension.Substring(1).ToLowerInvariant();
                 Type graphType;
                 switch (extension)
                 {
-                    case ".ShaderGraph":
+                    case ShaderGraphImporter.Extension:
                         graphType = typeof(MaterialGraph);
                         break;
-                    case ".ShaderSubGraph":
+                    case ShaderSubGraphImporter.Extension:
                         graphType = typeof(SubGraph);
                         break;
                     default:
@@ -507,6 +514,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                     persistenceKey = selectedGuid,
                     assetName = asset.name.Split('/').Last()
                 };
+                m_FrameAllAfterLayout = true;
                 graphEditorView.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
 
                 titleContent = new GUIContent(asset.name.Split('/').Last());
@@ -525,7 +533,11 @@ namespace UnityEditor.ShaderGraph.Drawing
         void OnGeometryChanged(GeometryChangedEvent evt)
         {
             graphEditorView.UnregisterCallback<GeometryChangedEvent>(OnGeometryChanged);
-            graphEditorView.graphView.FrameAll();
+            if (m_FrameAllAfterLayout)
+                graphEditorView.graphView.FrameAll();
+            m_FrameAllAfterLayout = false;
+            foreach (var node in m_GraphObject.graph.GetNodes<AbstractMaterialNode>())
+                node.Dirty(ModificationScope.Node);
         }
     }
 }
