@@ -9,7 +9,7 @@ using UnityEditor.Graphing.Util;
 namespace UnityEditor.ShaderGraph
 {
     [Serializable]
-    public abstract class AbstractMaterialGraph : IGraph, ISerializationCallbackReceiver, IGenerateProperties
+    abstract class AbstractMaterialGraph : IGraph, ISerializationCallbackReceiver, IGenerateProperties
     {
         public IGraphObject owner { get; set; }
 
@@ -159,7 +159,8 @@ namespace UnityEditor.ShaderGraph
                 if (m_Path == value)
                     return;
                 m_Path = value;
-                owner.RegisterCompleteObjectUndo("Change Path");
+                if(owner != null)
+                    owner.RegisterCompleteObjectUndo("Change Path");
             }
         }
 
@@ -706,7 +707,7 @@ namespace UnityEditor.ShaderGraph
     }
 
     [Serializable]
-    public class InspectorPreviewData
+    class InspectorPreviewData
     {
         public SerializableMesh serializedMesh = new SerializableMesh();
 
