@@ -141,15 +141,20 @@ namespace UnityEditor.ShaderGraph.Drawing
                 RegisterCallback<MouseDownEvent>(OnSubGraphDoubleClick);
             }
 
+            if (node is PropertyNode)
+            {
+                RegisterCallback<MouseEnterEvent>(OnMouseHover);
+                RegisterCallback<MouseLeaveEvent>(OnMouseHover);
+            }
+
             var masterNode = node as IMasterNode;
             if (masterNode != null)
             {
+                AddToClassList("master");
+
                 if (!masterNode.IsPipelineCompatible(GraphicsSettings.renderPipelineAsset))
                 {
-                    IconBadge wrongPipeline = IconBadge.CreateError("The current render pipeline is not compatible with this master node.");
-                    Add(wrongPipeline);
-                    VisualElement title = this.Q("title");
-                    wrongPipeline.AttachTo(title, SpriteAlignment.LeftCenter);
+                    AttachError("The current render pipeline is not compatible with this master node.");
                 }
             }
 
@@ -190,6 +195,51 @@ namespace UnityEditor.ShaderGraph.Drawing
                 //titleButtonContainer.Add(m_CollapseButton);
 
                 RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
+            }
+        }
+
+        public void AttachError(string errString)
+        {
+            ClearError();
+            var badge = IconBadge.CreateError(errString);
+            Add(badge);
+            var myTitle = this.Q("title");
+            badge.AttachTo(myTitle, SpriteAlignment.RightCenter);
+        }
+
+        public void ClearError()
+        {
+            var badge = this.Q<IconBadge>();
+            if(badge != null)
+            {
+                badge.Detach();
+                badge.RemoveFromHierarchy();
+            }
+        }
+
+        void OnMouseHover(EventBase evt)
+        {
+            var graphView = GetFirstAncestorOfType<GraphEditorView>();
+            if (graphView == null)
+                return;
+
+            var blackboardProvider = graphView.blackboardProvider;
+            if (blackboardProvider == null)
+                return;
+
+            var propNode = (PropertyNode)node;
+
+            var propRow = blackboardProvider.GetBlackboardRow(propNode.propertyGuid);
+            if (propRow != null)
+            {
+                if (evt.eventTypeId == MouseEnterEvent.TypeId())
+                {
+                    propRow.AddToClassList("hovered");
+                }
+                else
+                {
+                    propRow.RemoveFromClassList("hovered");
+                }
             }
         }
 
@@ -241,8 +291,9 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             if (evt.target is Node)
             {
-                evt.menu.AppendAction("Copy Shader", CopyToClipboard, _ => node.hasPreview ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Hidden);
-                evt.menu.AppendAction("Show Generated Code", ShowGeneratedCode, _ => node.hasPreview ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Hidden);
+                var canViewShader = node.hasPreview || node is IMasterNode;
+                evt.menu.AppendAction("Copy Shader", CopyToClipboard, _ => canViewShader ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Hidden);
+                evt.menu.AppendAction("Show Generated Code", ShowGeneratedCode, _ => canViewShader ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Hidden);
             }
 
             base.BuildContextualMenu(evt);
@@ -274,7 +325,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             if (masterNode != null)
                 return masterNode.GetShader(GenerationMode.ForReals, node.name, out textureInfo);
 
-            var graph = (AbstractMaterialGraph)node.owner;
+            var graph = (GraphData)node.owner;
             return graph.GetShader(node, GenerationMode.ForReals, node.name).shader;
         }
 
@@ -415,7 +466,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             UpdatePortInputs();
             UpdatePortInputVisibilities();
 
-            foreach (var listener in m_ControlItems.Children().OfType<INodeModificationListener>())
+            foreach (var listener in m_ControlItems.Children().OfType<AbstractMaterialNodeModificationListener>())
             {
                 if (listener != null)
                     listener.OnNodeModified(scope);
@@ -495,7 +546,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             foreach (var control in m_ControlItems.Children())
             {
-                var listener = control as INodeModificationListener;
+                var listener = control as AbstractMaterialNodeModificationListener;
                 if (listener != null)
                     listener.OnNodeModified(ModificationScope.Graph);
             }
