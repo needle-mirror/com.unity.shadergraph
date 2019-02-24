@@ -4,6 +4,22 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [5.6.1] - 2019-02-25
+
+## [5.6.0] - 2019-02-21
+### Fixed
+- Fixed the Transform node, so going from Tangent Space to any other space now works as expected.
+
+## [5.5.0] - 2019-02-18
+### Fixed
+- Fixed an issue where the Normal Reconstruct Z Node sometimes caused Not a Number (NaN) errors when using negative values.
+- Fixed the property blackboard so it no longer goes missing or turns very small.
+
+### Changed
+- Code refactor: all macros with ARGS have been swapped with macros with PARAM. This is because the ARGS macros were incorrectly named.
+
+## [5.4.0] - 2019-02-11
+
 ## [5.3.1] - 2019-01-28
 
 ## [5.3.0] - 2019-01-28
