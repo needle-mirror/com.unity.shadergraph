@@ -36,11 +36,6 @@ namespace UnityEditor.ShaderGraph
             get { return true; }
         }
 
-        public override bool isExposable
-        {
-            get { return true; }
-        }
-
         [SerializeField]
         private FloatType m_FloatType = FloatType.Default;
 

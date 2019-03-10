@@ -16,6 +16,8 @@ namespace UnityEditor.Graphing
 
     static class NodeUtils
     {
+        public static string docURL = "https://github.com/Unity-Technologies/ScriptableRenderPipeline/tree/master/com.unity.shadergraph/Documentation%7E/";
+
         public static void SlotConfigurationExceptionIfBadConfiguration(AbstractMaterialNode node, IEnumerable<int> expectedInputSlots, IEnumerable<int> expectedOutputSlots)
         {
             var missingSlots = new List<int>();
@@ -56,15 +58,6 @@ namespace UnityEditor.Graphing
 
             ListPool<ISlot>.Release(validSlots);
             return result;
-        }
-
-        public static string GetDuplicateSafeNameForSlot(AbstractMaterialNode node, int slotId, string name)
-        {
-            List<MaterialSlot> slots = new List<MaterialSlot>();
-            node.GetSlots(slots);
-
-            name = name.Trim();
-            return GraphUtil.SanitizeName(slots.Where(p => p.id != slotId).Select(p => p.RawDisplayName()), "{0} ({1})", name);
         }
 
         // CollectNodesNodeFeedsInto looks at the current node and calculates
@@ -126,6 +119,11 @@ namespace UnityEditor.Graphing
             }
             if (includeSelf == IncludeSelf.Include)
                 nodeList.Add(node);
+        }
+
+        public static string GetDocumentationString(AbstractMaterialNode node)
+        {
+            return $"{docURL}{node.name.Replace(" ", "-")}"+"-Node.md";
         }
 
         static Stack<MaterialSlot> s_SlotStack = new Stack<MaterialSlot>();
@@ -260,7 +258,7 @@ namespace UnityEditor.Graphing
                 case ConcreteSlotValueType.Texture3D:
                     return "Texture3D";
                 case ConcreteSlotValueType.Cubemap:
-                    return "TextureCube";
+                    return "Cubemap";
                 case ConcreteSlotValueType.Gradient:
                     return "Gradient";
                 case ConcreteSlotValueType.Matrix2:

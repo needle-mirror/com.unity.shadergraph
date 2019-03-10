@@ -6,14 +6,6 @@ namespace UnityEditor.ShaderGraph
 {
     class SamplerStateShaderProperty : AbstractShaderProperty<TextureSamplerState>
     {
-        public SamplerStateShaderProperty()
-        {
-            displayName = "SamplerState";
-
-            if(value == null)
-                value = new TextureSamplerState();
-        }
-
         public override PropertyType propertyType
         {
             get { return PropertyType.SamplerState; }
@@ -29,11 +21,6 @@ namespace UnityEditor.ShaderGraph
             get { return false; }
         }
 
-        public override bool isExposable
-        {
-            get { return false; }
-        }
-
         public override string GetPropertyBlockString()
         {
             return string.Empty;
@@ -41,17 +28,7 @@ namespace UnityEditor.ShaderGraph
 
         public override string GetPropertyDeclarationString(string delimiter = ";")
         {
-            return string.Format(@"SAMPLER({0}_{1}_{2}){3}", referenceName, 
-                Enum.GetName(typeof(TextureSamplerState.FilterMode), value.filter), 
-                Enum.GetName(typeof(TextureSamplerState.WrapMode), value.wrap), 
-                delimiter);
-        }
-
-        public override string GetPropertyAsArgumentString()
-        {
-            return string.Format(@"SamplerState {0}_{1}_{2}", referenceName, 
-                Enum.GetName(typeof(TextureSamplerState.FilterMode), value.filter), 
-                Enum.GetName(typeof(TextureSamplerState.WrapMode), value.wrap));
+            return string.Format(@"SAMPLER({0}){1}", referenceName, delimiter);
         }
 
         public override PreviewProperty GetPreviewMaterialProperty()
@@ -61,11 +38,7 @@ namespace UnityEditor.ShaderGraph
 
         public override AbstractMaterialNode ToConcreteNode()
         {
-            return new SamplerStateNode() 
-            {
-                filter = value.filter,
-                wrap = value.wrap
-            };
+            return new SamplerStateNode();
         }
 
         public override AbstractShaderProperty Copy()

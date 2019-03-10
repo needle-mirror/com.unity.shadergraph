@@ -68,7 +68,6 @@ namespace UnityEditor.ShaderGraph
         
         public abstract Vector4 defaultValue { get; }
         public abstract bool isBatchable { get; }
-        public abstract bool isExposable { get; }
         public abstract string GetPropertyBlockString();
         public abstract string GetPropertyDeclarationString(string delimiter = ";");
 

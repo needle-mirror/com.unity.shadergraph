@@ -2,41 +2,98 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using UnityEditor.ShaderGraph.Drawing;
+using UnityEditor.ShaderGraph.Drawing.Controls;
 using UnityEngine;
 using UnityEditor.Graphing;
-using UnityEditor.Rendering;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.ShaderGraph
 {
-    class SubGraphOutputNode : AbstractMaterialNode, IHasSettings
+    class SubGraphOutputControlAttribute : Attribute, IControlAttribute
     {
-        static string s_MissingOutputSlot = "A Sub Graph must have at least one output slot";
+        public VisualElement InstantiateControl(AbstractMaterialNode node, PropertyInfo propertyInfo)
+        {
+            if (!(node is SubGraphOutputNode))
+                throw new ArgumentException("Node must inherit from AbstractSubGraphIONode.", "node");
+            return new SubGraphOutputControlView((SubGraphOutputNode)node);
+        }
+    }
+
+    class SubGraphOutputControlView : VisualElement
+    {
+        SubGraphOutputNode m_Node;
+
+        public SubGraphOutputControlView(SubGraphOutputNode node)
+        {
+            m_Node = node;
+            Add(new Button(OnAdd) { text = "Add Slot" });
+            Add(new Button(OnRemove) { text = "Remove Slot" });
+        }
+
+        void OnAdd()
+        {
+            m_Node.AddSlot();
+        }
+
+        void OnRemove()
+        {
+            // tell the user that they might cchange things up.
+            if (EditorUtility.DisplayDialog("Sub Graph Will Change", "If you remove a slot and save the sub graph, you might change other graphs that are using this sub graph.\n\nDo you want to continue?", "Yes", "No"))
+            {
+                m_Node.owner.owner.RegisterCompleteObjectUndo("Removing Slot");
+                m_Node.RemoveSlot();
+            }
+        }
+    }
+
+    class SubGraphOutputNode : AbstractMaterialNode
+    {
+        [SubGraphOutputControl]
+        int controlDummy { get; set; }
 
         public SubGraphOutputNode()
         {
-            name = "Output";
+            name = "SubGraphOutputs";
         }
 
-        void ValidateShaderStage()
+        public override bool hasPreview
+        {
+            get { return true; }
+        }
+
+        public override PreviewMode previewMode
+        {
+            get { return PreviewMode.Preview3D; }
+        }
+
+        public ShaderStageCapability effectiveShaderStage
+        {
+            get
             {
                 List<MaterialSlot> slots = new List<MaterialSlot>();
                 GetInputSlots(slots);
 
                 foreach(MaterialSlot slot in slots)
-                slot.stageCapability = ShaderStageCapability.All;
+                {
+                    ShaderStageCapability stage = NodeUtils.GetEffectiveShaderStageCapability(slot, true);
 
-            var effectiveStage = ShaderStageCapability.All;
-            foreach (var slot in slots)
-                {
-                var stage = NodeUtils.GetEffectiveShaderStageCapability(slot, true);
-                if (stage != ShaderStageCapability.All)
-                {
-                    effectiveStage = stage;
-                    break;
+                    if(stage != ShaderStageCapability.All)
+                        return stage;
+                }
+
+                return ShaderStageCapability.All;
             }
         }
+
+        private void ValidateShaderStage()
+        {
+            List<MaterialSlot> slots = new List<MaterialSlot>();
+            GetInputSlots(slots);
+
+            foreach(MaterialSlot slot in slots)
+                slot.stageCapability = ShaderStageCapability.All;
+
+            var effectiveStage = effectiveShaderStage;
 
             foreach(MaterialSlot slot in slots)
                 slot.stageCapability = effectiveStage;
@@ -46,46 +103,37 @@ namespace UnityEditor.ShaderGraph
         {
             ValidateShaderStage();
 
-            if (!this.GetInputSlots<MaterialSlot>().Any())
-            {
-                owner.AddValidationError(tempId, s_MissingOutputSlot, ShaderCompilerMessageSeverity.Warning);
-            }
-            
             base.ValidateNode();
         }
 
-        public int AddSlot(ConcreteSlotValueType concreteValueType)
+        public virtual int AddSlot()
         {
             var index = this.GetInputSlots<ISlot>().Count() + 1;
-            string name = string.Format("Out_{0}", NodeUtils.GetDuplicateSafeNameForSlot(this, index, concreteValueType.ToString()));
-            AddSlot(MaterialSlot.CreateMaterialSlot(concreteValueType.ToSlotValueType(), index, name, NodeUtils.GetHLSLSafeName(name), SlotType.Input, Vector4.zero));
+            AddSlot(new Vector4MaterialSlot(index, "Output " + index, "Output" + index, SlotType.Input, Vector4.zero));
             return index;
         }
 
-        protected override void OnSlotsChanged()
+        public virtual void RemoveSlot()
         {
-            base.OnSlotsChanged();
-            ValidateNode();
+            var index = this.GetInputSlots<ISlot>().Count();
+            if (index == 0)
+                return;
+
+            RemoveSlot(index);
         }
 
-        static ConcreteSlotValueType[] s_AllowedValueTypes =
+        public void RemapOutputs(ShaderGenerator visitor, GenerationMode generationMode)
         {
-            ConcreteSlotValueType.Matrix4,
-            ConcreteSlotValueType.Matrix3,
-            ConcreteSlotValueType.Matrix2,
-            ConcreteSlotValueType.Gradient,
-            ConcreteSlotValueType.Vector4,
-            ConcreteSlotValueType.Vector3,
-            ConcreteSlotValueType.Vector2,
-            ConcreteSlotValueType.Vector1,
-            ConcreteSlotValueType.Boolean
-        };
+            foreach (var slot in graphOutputs)
+                visitor.AddShaderChunk(string.Format("{0} = {1};", slot.shaderOutputName, GetSlotValue(slot.id, generationMode)), true);
+        }
 
-        public VisualElement CreateSettingsElement()
+        public IEnumerable<MaterialSlot> graphOutputs
         {
-            PropertySheet ps = new PropertySheet();
-            ps.Add(new ReorderableSlotListView(this, SlotType.Input, s_AllowedValueTypes));
-            return ps;
+            get
+            {
+                return NodeExtensions.GetInputSlots<MaterialSlot>(this).OrderBy(x => x.id);
+            }
         }
     }
 }

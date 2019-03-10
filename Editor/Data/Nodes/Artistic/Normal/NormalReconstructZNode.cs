@@ -11,11 +11,6 @@ namespace UnityEditor.ShaderGraph
             name = "Normal Reconstruct Z";
         }
 
-        public override string documentationURL
-        {
-            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Normal-Reconstruct-Z-Node"; }
-        }
-
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("NormalReconstructZ", BindingFlags.Static | BindingFlags.NonPublic);
@@ -24,7 +19,6 @@ namespace UnityEditor.ShaderGraph
         static string NormalReconstructZ(
             [Slot(0, Binding.None)] Vector2 In,
             [Slot(2, Binding.None, ShaderStageCapability.Fragment)] out Vector3 Out)
-            
         {
             Out = Vector3.zero;
             return
