@@ -5,8 +5,6 @@ using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEditor.Graphing;
 using UnityEditor.Graphing.Util;
-using UnityEditor.Rendering;
-using UnityEditor.ShaderGraph.Drawing;
 using Edge = UnityEditor.Graphing.Edge;
 
 namespace UnityEditor.ShaderGraph
@@ -56,7 +54,13 @@ namespace UnityEditor.ShaderGraph
             get { return m_MovedProperties; }
         }
 
-        public string assetGuid { get; set; }
+        [SerializeField]
+        SerializableGuid m_GUID = new SerializableGuid();
+
+        public Guid guid
+        {
+            get { return m_GUID.guid; }
+        }
 
         #endregion
 
@@ -548,6 +552,7 @@ namespace UnityEditor.ShaderGraph
             var node = GetNodeFromGuid(s.nodeGuid);
             if (node == null)
             {
+                Debug.LogWarning("Node does not exist");
                 return;
             }
             ISlot slot = node.FindSlot<ISlot>(s.slotId);
@@ -573,16 +578,20 @@ namespace UnityEditor.ShaderGraph
 
         public void CollectShaderProperties(PropertyCollector collector, GenerationMode generationMode)
         {
+            if (!isSubGraph || generationMode == GenerationMode.Preview)
+        {
             foreach (var prop in properties)
-            {
-                if(generationMode == GenerationMode.Preview && prop.propertyType == PropertyType.Gradient)
-                {
-                    GradientShaderProperty gradientProperty = prop as GradientShaderProperty;
-                    GradientUtils.GetGradientPropertiesForPreview(collector, gradientProperty.referenceName, gradientProperty.value);
-                    continue;
-                }
-
                 collector.AddShaderProperty(prop);
+        }
+
+            if (isSubGraph)
+            {
+                List<AbstractMaterialNode> activeNodes = new List<AbstractMaterialNode>();
+                NodeUtils.DepthFirstCollectNodesFromNode(activeNodes, outputNode);
+                foreach (var node in activeNodes)
+                {
+                    node.CollectShaderProperties(collector, generationMode);
+                }
             }
         }
 
@@ -735,55 +744,8 @@ namespace UnityEditor.ShaderGraph
                 }
             }
 
-            var temporaryMarks = IndexSetPool.Get();
-            var permanentMarks = IndexSetPool.Get();
-            var slots = ListPool<MaterialSlot>.Get();
-            
-            // Make sure we process a node's children before the node itself.
-            var stack = StackPool<AbstractMaterialNode>.Get();
             foreach (var node in GetNodes<AbstractMaterialNode>())
-            {
-                stack.Push(node);
-            }
-            while (stack.Count > 0)
-            {
-                var node = stack.Pop();
-                if (permanentMarks.Contains(node.tempId.index))
-                {
-                    continue;
-                }
-                
-                if (temporaryMarks.Contains(node.tempId.index))
-                {
                 node.ValidateNode();
-                    permanentMarks.Add(node.tempId.index);
-                }
-                else
-                {
-                    temporaryMarks.Add(node.tempId.index);
-                    stack.Push(node);
-                    node.GetInputSlots(slots);
-                    foreach (var inputSlot in slots)
-                    {
-                        var nodeEdges = GetEdges(inputSlot.slotReference);
-                        foreach (var edge in nodeEdges)
-                        {
-                            var fromSocketRef = edge.outputSlot;
-                            var childNode = GetNodeFromGuid(fromSocketRef.nodeGuid);
-                            if (childNode != null)
-                            {
-                                stack.Push(childNode);
-                            }
-                        }
-                    }
-                    slots.Clear();
-                }
-            }
-            
-            StackPool<AbstractMaterialNode>.Release(stack);
-            ListPool<MaterialSlot>.Release(slots);
-            IndexSetPool.Release(temporaryMarks);
-            IndexSetPool.Release(permanentMarks);
 
             foreach (var edge in m_AddedEdges.ToList())
             {
@@ -795,17 +757,11 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
-        public void AddValidationError(Identifier id, string errorMessage,
-            ShaderCompilerMessageSeverity severity = ShaderCompilerMessageSeverity.Error)
+        public void AddValidationError(Identifier id, string errorMessage)
         {
-            messageManager?.AddOrAppendError(this, id, new ShaderMessage(errorMessage, severity));
+            messageManager?.AddOrAppendError(this, id, new ShaderMessage(errorMessage));;
         }
-
-        public void ClearErrorsForNode(AbstractMaterialNode node)
-        {
-            messageManager?.ClearNodesFromProvider(this, node.ToEnumerable());
-        }
-
+        
         public void ReplaceWith(GraphData other)
         {
             if (other == null)

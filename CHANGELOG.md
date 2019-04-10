@@ -4,69 +4,38 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [5.13.0] - 2019-04-15
+## [6.5.3] - 2019-04-11
 
-## [5.12.0] - 2019-04-11
+## [6.5.2] - 2019-03-11
 
-## [5.11.0] - 2019-04-01
-### Fixed
-- Added padding on input values for Blend node to prevent NaN outputs. 
+## [6.5.1] - 2019-03-08
 
-## [5.10.0] - 2019-03-19
-### Added
-- You can now use Sub Graphs in other Sub Graphs.
-- Preview shaders now compile in the background, and only redraw when necessary.
+## [6.5.0] - 2019-03-07
 
 ### Fixed
-- Default input fields now correctly hide and show when connections change.
-
-## [5.9.0] - 2019-03-15
-
-## [5.8.0] - 2019-03-13
-### Added
-- You can now add Matrix, Sampler State, and Gradient properties to the Blackboard.
-- Added Custom Function node. Use this node to define a custom HLSL function either via string directly in the graph, or via a path to an HLSL file.
-
-### Changed
-- Removed Blackboard fields, which had no effect on Sub Graph input ports, from the Sub Graph Blackboard.
-- Subgraph Output node is now called Output.
-- Subgraph Output node now supports renaming of ports.
-- Subgraph Output node now supports all port types.
-- Subgraph Output node now supports reordering ports.
-- When you convert nodes to a Sub Graph, Shader Graph generates properties and output ports in the Sub Graph, and now by default, names those resulting properties and output ports based on their types.
-
-### Fixed
-- Fixed an error when opening saved Shader Graphs containing one or more Voronoi nodes.
-- You can now drag normal map type textures on to a Shader Graph to create Sample Texture 2D nodes with the correct type set.
-- Fixed the Multiply node so default input values are applied correctly.
-- Fixed an issue where IsFaceSign would not compile within SubGraph Nodes.
-- You can now undo edits to Vector port default input fields.
-- You can now undo edits to Gradient port default input fields.
-- Boolean port input fields now display correct values when you undo changes.
-- Vector type properties now behave as expected when you undo changes.
-
-## [5.7.0] - 2019-03-07
 - Fixed master preview for HDRP master nodes when alpha clip is enabled.
 
-## [5.6.0] - 2019-02-21
+## [6.4.0] - 2019-02-21
 ### Fixed
 - Fixed the Transform node, so going from Tangent Space to any other space now works as expected.
 
-## [5.5.0] - 2019-02-18
+## [6.3.0] - 2019-02-18
 ### Fixed
 - Fixed an issue where the Normal Reconstruct Z Node sometimes caused Not a Number (NaN) errors when using negative values.
+
+## [6.2.0] - 2019-02-15
+### Fixed
 - Fixed the property blackboard so it no longer goes missing or turns very small.
 
 ### Changed
 - Code refactor: all macros with ARGS have been swapped with macros with PARAM. This is because the ARGS macros were incorrectly named.
 
-## [5.4.0] - 2019-02-11
+## [6.1.0] - 2019-02-13
 
-## [5.3.1] - 2019-01-28
-
-## [5.3.0] - 2019-01-28
+## [6.0.0] - 2019-02-23
 ### Added
 - When you hover your cursor over a property in the blackboard, this now highlights the corresponding property elements in your Shader Graph. Similarly, if you hover over a property in the Shader Graph itself, this highlights the corresponding property in the blackboard.
+- Property nodes in your Shader Graph now have a similar look and styling as the properties in the blackboard.
 
 ### Changed
 - Errors in the compiled shader are now displayed as badges on the appropriate node.

@@ -9,8 +9,7 @@ namespace UnityEditor.ShaderGraph
     {
         public Matrix3ShaderProperty()
         {
-            displayName = "Matrix3x3";
-            value = Matrix4x4.identity;
+            displayName = "Matrix3";
         }
 
         public override PropertyType propertyType
@@ -23,23 +22,9 @@ namespace UnityEditor.ShaderGraph
             get { return true; }
         }
 
-        public override bool isExposable
-        {
-            get { return false; }
-        }
-
         public override string GetPropertyDeclarationString(string delimiter = ";")
         {
-            return "float4x4 " + referenceName + delimiter;
-        }
-
-        public override PreviewProperty GetPreviewMaterialProperty()
-        {
-            return new PreviewProperty(PropertyType.Matrix3)
-            {
-                name = referenceName,
-                matrixValue = value
-            };
+            return "float4x4 " + referenceName + " = float4x4(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0)" + delimiter;
         }
 
         public override AbstractMaterialNode ToConcreteNode()
