@@ -4,9 +4,18 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [5.13.0] - 2019-04-15
+
+## [5.12.0] - 2019-04-11
+
+## [5.11.0] - 2019-04-01
+### Fixed
+- Added padding on input values for Blend node to prevent NaN outputs. 
+
 ## [5.10.0] - 2019-03-19
 ### Added
 - You can now use Sub Graphs in other Sub Graphs.
+- Preview shaders now compile in the background, and only redraw when necessary.
 
 ### Fixed
 - Default input fields now correctly hide and show when connections change.
