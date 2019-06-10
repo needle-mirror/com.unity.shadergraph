@@ -229,11 +229,7 @@ namespace UnityEditor.ShaderGraph
                 if (fromNode == null)
                     return string.Empty;
 
-                var slot = fromNode.FindOutputSlot<MaterialSlot>(fromSocketRef.slotId);
-                if (slot == null)
-                    return string.Empty;
-
-                return GenerationUtils.AdaptNodeOutput(fromNode, slot.id, port.concreteValueType);
+                return fromNode.GetOutputForSlot(fromSocketRef, port.concreteValueType, generationMode);
             }
 
             return port.GetDefaultValue(generationMode);
@@ -285,10 +281,6 @@ namespace UnityEditor.ShaderGraph
 
         public override void ValidateNode()
         {
-            if (!this.GetOutputSlots<MaterialSlot>().Any())
-            {
-                owner.AddValidationError(objectId, k_MissingOutputSlot, ShaderCompilerMessageSeverity.Warning);
-            }
             if(sourceType == HlslSourceType.File)
             {
                 if(!string.IsNullOrEmpty(functionSource))
@@ -301,8 +293,16 @@ namespace UnityEditor.ShaderGraph
                         {
                             owner.AddValidationError(objectId, k_InvalidFileType, ShaderCompilerMessageSeverity.Error);
                         }
+                        else
+                        {
+                            owner.ClearErrorsForNode(this);
+                        }
                     }
                 }
+            }
+            if (!this.GetOutputSlots<MaterialSlot>().Any())
+            {
+                owner.AddValidationError(objectId, k_MissingOutputSlot, ShaderCompilerMessageSeverity.Warning);
             }
             ValidateSlotName();
 

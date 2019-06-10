@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Drawing.Inspector;
 using UnityEngine;
 using UnityEditor.Graphing;
 using UnityEditor.Graphing.Util;
@@ -333,12 +332,14 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         void NodeCreationRequest(NodeCreationContext c)
         {
-            m_SearchWindowProvider.connectedPort = null;
-            m_SearchWindowProvider.target = c.target;
-            SearcherWindow.Show(m_EditorWindow, (m_SearchWindowProvider as SearcherProvider).LoadSearchWindow(),
-                item => (m_SearchWindowProvider as SearcherProvider).OnSearcherSelectEntry(item, c.screenMousePosition - m_EditorWindow.position.position),
-                c.screenMousePosition - m_EditorWindow.position.position, null);
-
+            if (EditorWindow.focusedWindow == m_EditorWindow) //only display the search window when current graph view is focused 
+            {
+                m_SearchWindowProvider.connectedPort = null;
+                m_SearchWindowProvider.target = c.target;
+                SearcherWindow.Show(m_EditorWindow, (m_SearchWindowProvider as SearcherProvider).LoadSearchWindow(),
+                    item => (m_SearchWindowProvider as SearcherProvider).OnSearcherSelectEntry(item, c.screenMousePosition - m_EditorWindow.position.position),
+                    c.screenMousePosition - m_EditorWindow.position.position, null);
+            }
         }
 
 
@@ -906,14 +907,11 @@ namespace UnityEditor.ShaderGraph.Drawing
                 m_SearchWindowProvider.targetSlotReference.node == node)
             {
                 m_SearchWindowProvider.nodeNeedsRepositioning = false;
-                foreach (var element in nodeView.inputContainer.Children().Union(nodeView.outputContainer.Children()))
+                if (nodeView is IShaderNodeView shaderView &&
+                    shaderView.FindPort(m_SearchWindowProvider.targetSlotReference, out var port))
                 {
-                    var port = (ShaderPort) element;
-                    if (port.slot.slotReference.Equals(m_SearchWindowProvider.targetSlotReference))
-                    {
-                        port.RegisterCallback<GeometryChangedEvent>(RepositionNode);
-                        return;
-                    }
+                    port.RegisterCallback<GeometryChangedEvent>(RepositionNode);
+                    return;
                 }
             }
 
@@ -1117,7 +1115,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             if (sourceNodeView != null)
             {
-                var sourceAnchor = sourceNodeView.gvNode.outputContainer.Children().OfType<ShaderPort>().First(x => x.slot.Equals(sourceSlot));
+                sourceNodeView.FindPort(sourceSlot.slotReference, out var sourceAnchor);
 
                 IShaderNodeView targetNodeView;
                 if (useVisualNodeMap)
@@ -1125,7 +1123,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 else
                     targetNodeView = m_GraphView.nodes.ToList().OfType<IShaderNodeView>().First(x => x.node == targetNode);
 
-                var targetAnchor = targetNodeView.gvNode.inputContainer.Children().OfType<ShaderPort>().First(x => x.slot.Equals(targetSlot));
+                targetNodeView.FindPort(targetSlot.slotReference, out var targetAnchor);
 
                 var edgeView = new Edge
                 {
@@ -1207,7 +1205,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                     }
                 }
 
-                foreach (var anchorView in nodeView.inputContainer.Children().OfType<Port>())
+                foreach (var anchorView in nodeView.inputContainer.Query<Port>().ToList())
                 {
                     var targetSlot = anchorView.GetSlot();
                     if (targetSlot.valueType != SlotValueType.DynamicVector)
@@ -1324,9 +1322,9 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             m_InspectorView.ClampToParentLayout(m_GraphView.layout);
 
-            if (m_MasterPreviewView.expanded)
+            if (m_MasterPreviewView.visible)
             {
-                m_FloatingWindowsLayout.previewLayout.size = m_MasterPreviewView.previewTextureView.layout.size;
+                m_FloatingWindowsLayout.previewLayout.size = m_MasterPreviewView.layout.size;
             }
 
             string serializedWindowLayout = JsonUtility.ToJson(m_FloatingWindowsLayout);

@@ -382,8 +382,11 @@ namespace UnityEditor.ShaderGraph
 
         public AbstractShaderProperty GetSlotProperty(int inputSlotId)
         {
+            if (owner == null)
+                return null;
+
             var inputSlot = FindSlot<MaterialSlot>(inputSlotId);
-            if (inputSlot == null)
+            if (inputSlot?.slotReference.node == null)
                 return null;
 
             var edges = owner.GetEdges(inputSlot.slotReference);
@@ -417,7 +420,7 @@ namespace UnityEditor.ShaderGraph
             return null;
         }
 
-        protected virtual string GetOutputForSlot(SlotReference fromSocketRef,  ConcreteSlotValueType valueType, GenerationMode generationMode)
+        protected internal virtual string GetOutputForSlot(SlotReference fromSocketRef,  ConcreteSlotValueType valueType, GenerationMode generationMode)
         {
             var slot = FindOutputSlot<MaterialSlot>(fromSocketRef.slotId);
             if (slot == null)

@@ -9,7 +9,6 @@ using UnityEditor.ShaderGraph.Drawing.Controls;
 using UnityEditor.ShaderGraph.Internal;
 using UnityEngine;
 using UnityEngine.UIElements;
-using Data.Interfaces;
 using UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers;
 
 namespace UnityEditor.ShaderGraph
@@ -80,6 +79,7 @@ namespace UnityEditor.ShaderGraph
                     graph.isSubGraph,
                     graph,
                     this.ChangeExposedField,
+                    this.ChangeDisplayNameField,
                     this.ChangeReferenceNameField,
                     () => graph.ValidateGraph(),
                     () => graph.OnKeywordChanged(),
@@ -96,6 +96,17 @@ namespace UnityEditor.ShaderGraph
         {
             property.generatePropertyBlock = newValue;
             icon = property.generatePropertyBlock ? BlackboardProvider.exposedIcon : null;
+        }
+
+        void ChangeDisplayNameField(string newValue)
+        {
+            var graph = node.owner as GraphData;
+
+            if(newValue != property.displayName)
+            {
+                property.displayName = newValue;
+                graph.SanitizeGraphInputName(property);
+            }
         }
 
         void ChangeReferenceNameField(string newValue)
@@ -233,6 +244,12 @@ namespace UnityEditor.ShaderGraph
         {
         }
 
+        public bool FindPort(SlotReference slot, out ShaderPort port)
+        {
+            port = output as ShaderPort;
+            return port != null && port.slot.slotReference.Equals(slot);
+        }
+
         public void OnModified(ModificationScope scope)
         {
             //disconnected property nodes are always active
@@ -252,7 +269,7 @@ namespace UnityEditor.ShaderGraph
                 this.icon = icon;
             }
 
-            if (scope == ModificationScope.Topological)
+            if (scope == ModificationScope.Topological || scope == ModificationScope.Node)
             {
                 // Updating the text label of the output slot
                 var slot = node.GetSlots<MaterialSlot>().ToList().First();
