@@ -161,7 +161,7 @@ namespace UnityEditor.ShaderGraph
                         case ConcreteSlotValueType.Vector1:
                             return string.Format("({0}.xxx)", rawOutput);
                         case ConcreteSlotValueType.Vector2:
-                            return string.Format("({0}3({1}, 0.0))", node.precision, rawOutput);
+                            return string.Format("($precision3({0}, 0.0))", rawOutput);
                         case ConcreteSlotValueType.Vector4:
                             return string.Format("({0}.xyz)", rawOutput);
                         default:
@@ -173,9 +173,9 @@ namespace UnityEditor.ShaderGraph
                         case ConcreteSlotValueType.Vector1:
                             return string.Format("({0}.xxxx)", rawOutput);
                         case ConcreteSlotValueType.Vector2:
-                            return string.Format("({0}4({1}, 0.0, 1.0))", node.precision, rawOutput);
+                            return string.Format("($precision4({0}, 0.0, 1.0))", rawOutput);
                         case ConcreteSlotValueType.Vector3:
-                            return string.Format("({0}4({1}, 1.0))", node.precision, rawOutput);
+                            return string.Format("($precision4({0}, 1.0))", rawOutput);
                         default:
                             return kErrorString;
                     }
@@ -688,6 +688,11 @@ namespace UnityEditor.ShaderGraph
             foreach (var channel in pixelRequirements.requiresMeshUVs.Distinct())
                 pixelShaderSurfaceInputs.AppendLine("surfaceInput.{0} = {0};", ShaderGeneratorNames.GetUVName(channel));
 
+            if (pixelRequirements.requiresTime)
+            {
+                pixelShaderSurfaceInputs.AppendLine("surfaceInput.{0} = _TimeParameters.xyz;", ShaderGeneratorNames.TimeParameters);
+            }
+
             // ----------------------------------------------------- //
             //                START VERTEX DESCRIPTION               //
             // ----------------------------------------------------- //
@@ -715,6 +720,11 @@ namespace UnityEditor.ShaderGraph
 
             foreach (var channel in vertexRequirements.requiresMeshUVs.Distinct())
                 vertexShaderDescriptionInputs.AppendLine("vdi.{0} = {0};", channel.GetUVName(), (int)channel);
+
+            if (vertexRequirements.requiresTime)
+            {
+                vertexShaderDescriptionInputs.AppendLine("vdi.{0} = _TimeParameters.xyz;", ShaderGeneratorNames.TimeParameters);
+            }
         }
 
         public enum Dimension
@@ -792,7 +802,7 @@ namespace UnityEditor.ShaderGraph
         {
             // Should never be called without a node
             Debug.Assert(node != null);
-            
+
             var vertexOutputStruct = new ShaderStringBuilder(2);
 
             var vertexShader = new ShaderStringBuilder(2);
@@ -830,7 +840,7 @@ namespace UnityEditor.ShaderGraph
 
             if (outputSlot != null)
             {
-                var result = string.Format("surf.{0}", NodeUtils.GetHLSLSafeName(outputSlot.shaderOutputName));
+                var result = $"surf.{NodeUtils.GetHLSLSafeName(outputSlot.shaderOutputName)}_{outputSlot.id}";
                 pixelShaderSurfaceRemap.AppendLine("return all(isfinite({0})) ? {1} : {2};",
                     result, AdaptNodeOutputForPreview(node, outputSlot.id, result), nanOutput);
             }
