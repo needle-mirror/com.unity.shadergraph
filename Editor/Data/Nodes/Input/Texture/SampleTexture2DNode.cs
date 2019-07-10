@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
         Normal
     };
 
+    [FormerName("UnityEditor.ShaderGraph.Texture2DNode")]
     [Title("Input", "Texture", "Sample Texture 2D")]
     public class SampleTexture2DNode : AbstractMaterialNode, IGeneratesBodyCode, IMayRequireMeshUV
     {
@@ -28,7 +29,7 @@ namespace UnityEditor.ShaderGraph
         const string kOutputSlotGName = "G";
         const string kOutputSlotBName = "B";
         const string kOutputSlotAName = "A";
-        const string kTextureInputName = "Tex";
+        const string kTextureInputName = "Texture";
         const string kUVInputName = "UV";
         const string kSamplerInputName = "Sampler";
 
@@ -53,10 +54,7 @@ namespace UnityEditor.ShaderGraph
                     return;
 
                 m_TextureType = value;
-                if (onModified != null)
-                {
-                    onModified(this, ModificationScope.Graph);
-                }
+                Dirty(ModificationScope.Graph);
             }
         }
 
@@ -68,7 +66,7 @@ namespace UnityEditor.ShaderGraph
             AddSlot(new Vector1MaterialSlot(OutputSlotBId, kOutputSlotBName, kOutputSlotBName, SlotType.Output, 0));
             AddSlot(new Vector1MaterialSlot(OutputSlotAId, kOutputSlotAName, kOutputSlotAName, SlotType.Output, 0));
             AddSlot(new Texture2DInputMaterialSlot(TextureInputId, kTextureInputName, kTextureInputName));
-            AddSlot(new UVMaterialSlot(UVInput, kUVInputName, kUVInputName, UVChannel.uv0));
+            AddSlot(new UVMaterialSlot(UVInput, kUVInputName, kUVInputName, UVChannel.UV0));
             AddSlot(new SamplerStateMaterialSlot(SamplerInput, kSamplerInputName, kSamplerInputName, SlotType.Input));
             RemoveSlotsNameNotMatching(new[] { OutputSlotRGBAId, OutputSlotRId, OutputSlotGId, OutputSlotBId, OutputSlotAId, TextureInputId, UVInput, SamplerInput });
         }
@@ -82,34 +80,18 @@ namespace UnityEditor.ShaderGraph
             var samplerSlot = FindInputSlot<MaterialSlot>(SamplerInput);
             var edgesSampler = owner.GetEdges(samplerSlot.slotReference);
 
-            string result;
-            if (edgesSampler.Any())
-            {
-                result = string.Format(@"
-#ifdef UNITY_COMPILER_HLSL
-{0}4 {1} = {2}.Sample({3}, {4});
-#else
-{0}4 {1} = UNITY_SAMPLE_TEX2D({2}, {4});
-#endif"
-                        , precision
-                        , GetVariableNameForSlot(OutputSlotRGBAId)
-                        , GetSlotValue(TextureInputId, generationMode)
-                        , GetSlotValue(SamplerInput, generationMode)
-                        , uvName);
-            }
-            else
-            {
-                result = string.Format("{0}4 {1} = UNITY_SAMPLE_TEX2D({2},{3});"
-                        , precision
-                        , GetVariableNameForSlot(OutputSlotRGBAId)
-                        , GetSlotValue(TextureInputId, generationMode)
-                        , uvName);
-            }
+            var id = GetSlotValue(TextureInputId, generationMode);
+            var result = string.Format("{0}4 {1} = SAMPLE_TEXTURE2D({2}, {3}, {4});"
+                , precision
+                , GetVariableNameForSlot(OutputSlotRGBAId)
+                , id
+                , edgesSampler.Any() ? GetSlotValue(SamplerInput, generationMode) : "sampler" + id
+                , uvName);
 
             visitor.AddShaderChunk(result, true);
 
             if (textureType == TextureType.Normal)
-                visitor.AddShaderChunk(string.Format("{0}.rgb = UnpackNormal({0});", GetVariableNameForSlot(OutputSlotRGBAId)), true);
+                visitor.AddShaderChunk(string.Format("{0}.rgb = UnpackNormalmapRGorAG({0});", GetVariableNameForSlot(OutputSlotRGBAId)), true);
 
             visitor.AddShaderChunk(string.Format("{0} {1} = {2}.r;", precision, GetVariableNameForSlot(OutputSlotRId), GetVariableNameForSlot(OutputSlotRGBAId)), true);
             visitor.AddShaderChunk(string.Format("{0} {1} = {2}.g;", precision, GetVariableNameForSlot(OutputSlotGId), GetVariableNameForSlot(OutputSlotRGBAId)), true);

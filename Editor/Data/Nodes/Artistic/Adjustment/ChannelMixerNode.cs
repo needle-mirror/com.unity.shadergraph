@@ -64,8 +64,7 @@ namespace UnityEditor.ShaderGraph
                 if ((value.outRed == m_ChannelMixer.outRed) && (value.outGreen == m_ChannelMixer.outGreen) && (value.outBlue == m_ChannelMixer.outBlue))
                     return;
                 m_ChannelMixer = value;
-                if (onModified != null)
-                    onModified(this, ModificationScope.Node);
+                Dirty(ModificationScope.Node);
             }
         }
 
@@ -75,7 +74,7 @@ namespace UnityEditor.ShaderGraph
             var inputValue = GetSlotValue(InputSlotId, generationMode);
             var outputValue = GetSlotValue(OutputSlotId, generationMode);
 
-            sb.AppendLine("{0} {1};", ConvertConcreteSlotValueTypeToString(precision, FindInputSlot<MaterialSlot>(InputSlotId).concreteValueType), GetVariableNameForSlot(OutputSlotId));
+            sb.AppendLine("{0} {1};", NodeUtils.ConvertConcreteSlotValueTypeToString(precision, FindInputSlot<MaterialSlot>(InputSlotId).concreteValueType), GetVariableNameForSlot(OutputSlotId));
             if (!generationMode.IsPreview())
             {
                 sb.AppendLine("{0}3 _{1}_Red = {0}3 ({2}, {3}, {4});", precision, GetVariableNameForNode(), channelMixer.outRed[0], channelMixer.outRed[1], channelMixer.outRed[2]);
@@ -91,24 +90,21 @@ namespace UnityEditor.ShaderGraph
         {
             base.CollectPreviewMaterialProperties(properties);
 
-            properties.Add(new PreviewProperty()
+            properties.Add(new PreviewProperty(PropertyType.Vector3)
             {
                 name = string.Format("_{0}_Red", GetVariableNameForNode()),
-                propType = PropertyType.Vector3,
                 vector4Value = channelMixer.outRed
             });
 
-            properties.Add(new PreviewProperty()
+            properties.Add(new PreviewProperty(PropertyType.Vector3)
             {
                 name = string.Format("_{0}_Green", GetVariableNameForNode()),
-                propType = PropertyType.Vector3,
                 vector4Value = channelMixer.outGreen
             });
 
-            properties.Add(new PreviewProperty()
+            properties.Add(new PreviewProperty(PropertyType.Vector3)
             {
                 name = string.Format("_{0}_Blue", GetVariableNameForNode()),
-                propType = PropertyType.Vector3,
                 vector4Value = channelMixer.outBlue
             });
         }
@@ -139,22 +135,21 @@ namespace UnityEditor.ShaderGraph
             });
         }
 
-        public void GenerateNodeFunction(ShaderGenerator visitor, GenerationMode generationMode)
+        public void GenerateNodeFunction(FunctionRegistry registry, GenerationMode generationMode)
         {
-            var sb = new ShaderStringBuilder();
-
-            sb.AppendLine("void {0} ({1} In, {2}3 Red, {2}3 Green, {2}3 Blue, out {3} Out)",
-                GetFunctionName(),
-                FindInputSlot<MaterialSlot>(InputSlotId).concreteValueType.ToString(precision),
-                precision,
-                FindOutputSlot<MaterialSlot>(OutputSlotId).concreteValueType.ToString(precision));
-            using (sb.BlockScope())
+            registry.ProvideFunction(GetFunctionName(), s =>
             {
-                sb.AppendLine("Out = {0}(dot(In, Red), dot(In, Green), dot(In, Blue));",
+                s.AppendLine("void {0} ({1} In, {2}3 Red, {2}3 Green, {2}3 Blue, out {3} Out)",
+                    GetFunctionName(),
+                    FindInputSlot<MaterialSlot>(InputSlotId).concreteValueType.ToString(precision),
+                    precision,
                     FindOutputSlot<MaterialSlot>(OutputSlotId).concreteValueType.ToString(precision));
-            }
-
-            visitor.AddShaderChunk(sb.ToString(), true);
+                using (s.BlockScope())
+                {
+                    s.AppendLine("Out = {0}(dot(In, Red), dot(In, Green), dot(In, Blue));",
+                        FindOutputSlot<MaterialSlot>(OutputSlotId).concreteValueType.ToString(precision));
+                }
+            });
         }
     }
 }

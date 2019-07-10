@@ -27,7 +27,7 @@ namespace UnityEditor.ShaderGraph
 
         string GetFunctionName()
         {
-            return "Unity_Flip_" + ConvertConcreteSlotValueTypeToString(precision, FindOutputSlot<MaterialSlot>(OutputSlotId).concreteValueType);
+            return "Unity_Flip_" + NodeUtils.ConvertConcreteSlotValueTypeToString(precision, FindOutputSlot<MaterialSlot>(OutputSlotId).concreteValueType);
         }
 
         public sealed override void UpdateNodeAfterDeserialization()
@@ -37,7 +37,7 @@ namespace UnityEditor.ShaderGraph
             RemoveSlotsNameNotMatching(new[] { InputSlotId, OutputSlotId });
         }
 
-        int channelCount { get { return (int)SlotValueHelper.GetChannelCount(FindSlot<MaterialSlot>(InputSlotId).concreteValueType); } }
+        int channelCount { get { return SlotValueHelper.GetChannelCount(FindSlot<MaterialSlot>(InputSlotId).concreteValueType); } }
 
         [SerializeField]
         private bool m_RedChannel;
@@ -51,10 +51,7 @@ namespace UnityEditor.ShaderGraph
                 if (m_RedChannel == value.isOn)
                     return;
                 m_RedChannel = value.isOn;
-                if (onModified != null)
-                {
-                    onModified(this, ModificationScope.Node);
-                }
+                Dirty(ModificationScope.Node);
             }
         }
 
@@ -70,10 +67,7 @@ namespace UnityEditor.ShaderGraph
                 if (m_GreenChannel == value.isOn)
                     return;
                 m_GreenChannel = value.isOn;
-                if (onModified != null)
-                {
-                    onModified(this, ModificationScope.Node);
-                }
+                Dirty(ModificationScope.Node);
             }
         }
 
@@ -89,10 +83,7 @@ namespace UnityEditor.ShaderGraph
                 if (m_BlueChannel == value.isOn)
                     return;
                 m_BlueChannel = value.isOn;
-                if (onModified != null)
-                {
-                    onModified(this, ModificationScope.Node);
-                }
+                Dirty(ModificationScope.Node);
             }
         }
 
@@ -107,10 +98,7 @@ namespace UnityEditor.ShaderGraph
                 if (m_AlphaChannel == value.isOn)
                     return;
                 m_AlphaChannel = value.isOn;
-                if (onModified != null)
-                {
-                    onModified(this, ModificationScope.Node);
-                }
+                Dirty(ModificationScope.Node);
             }
         }
 
@@ -146,10 +134,9 @@ namespace UnityEditor.ShaderGraph
         {
             base.CollectPreviewMaterialProperties(properties);
 
-            properties.Add(new PreviewProperty()
+            properties.Add(new PreviewProperty(PropertyType.Vector4)
             {
                 name = string.Format("_{0}_Flip", GetVariableNameForNode()),
-                propType = PropertyType.Vector4,
                 vector4Value = new Vector4(Convert.ToInt32(m_RedChannel), Convert.ToInt32(m_GreenChannel), Convert.ToInt32(m_BlueChannel), Convert.ToInt32(m_AlphaChannel)),
             });
         }
@@ -178,9 +165,25 @@ namespace UnityEditor.ShaderGraph
                 FindOutputSlot<MaterialSlot>(OutputSlotId).concreteValueType.ToString(precision));
             using (sb.BlockScope())
             {
-                sb.AppendLine("Out = abs(Flip - In);");
+                sb.AppendLine("Out = (Flip * -2 + 1) * In;");
             }
             visitor.AddShaderChunk(sb.ToString(), true);
+        }
+
+        public void GenerateNodeFunction(FunctionRegistry registry, GenerationMode generationMode)
+        {
+            registry.ProvideFunction(GetFunctionName(), s =>
+            {
+                s.AppendLine("void {0}({1} In, {2} Flip, out {3} Out)",
+                    GetFunctionName(),
+                    FindInputSlot<MaterialSlot>(InputSlotId).concreteValueType.ToString(precision),
+                    FindInputSlot<MaterialSlot>(InputSlotId).concreteValueType.ToString(precision),
+                    FindOutputSlot<MaterialSlot>(OutputSlotId).concreteValueType.ToString(precision));
+                using (s.BlockScope())
+                {
+                    s.AppendLine("Out = (Flip * -2 + 1) * In;");
+                }
+            });
         }
     }
 }

@@ -29,7 +29,7 @@ namespace UnityEditor.ShaderGraph
 
         protected override string ConcreteSlotValueAsVariable(AbstractMaterialNode.OutputPrecision precision)
         {
-            return string.Format("IsGammaSpace() ? {0}4({1}, {2}, {3}, {4}) : {0}4 (GammaToLinearSpace({0}3({1}, {2}, {3})), {4})"
+            return string.Format("IsGammaSpace() ? {0}4({1}, {2}, {3}, {4}) : {0}4 (SRGBToLinear({0}3({1}, {2}, {3})), {4})"
                 , precision
                 , value.x
                 , value.y
@@ -57,13 +57,10 @@ namespace UnityEditor.ShaderGraph
 
         public override PreviewProperty GetPreviewProperty(string name)
         {
-            var pp = new PreviewProperty
+            var pp = new PreviewProperty(PropertyType.Color)
             {
                 name = name,
-                propType = PropertyType.Color,
-                vector4Value = new Vector4(value.x, value.y, value.z, value.w),
-                floatValue = value.x,
-                colorValue = new Vector4(value.x, value.x, value.z, value.w),
+                colorValue = new Color(value.x, value.x, value.z, value.w),
             };
             return pp;
         }
