@@ -3,7 +3,6 @@ using UnityEditor.Experimental.UIElements;
 using UnityEditor.Graphing;
 using UnityEngine;
 using UnityEngine.Experimental.UIElements;
-using UnityEngine.Experimental.UIElements.StyleSheets;
 using Object = UnityEngine.Object;
 
 namespace UnityEditor.ShaderGraph.Drawing.Slots
@@ -15,6 +14,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Slots
         public TextureSlotControlView(Texture2DInputMaterialSlot slot)
         {
             m_Slot = slot;
+            AddStyleSheetPath("Styles/Controls/TextureSlotControlView");
             var objectField = new ObjectField { objectType = typeof(Texture), value = m_Slot.texture };
             objectField.OnValueChanged(OnValueChanged);
             Add(objectField);

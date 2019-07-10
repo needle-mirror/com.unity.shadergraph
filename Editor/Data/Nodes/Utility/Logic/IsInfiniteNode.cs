@@ -1,7 +1,5 @@
 using System.Reflection;
 using UnityEngine;
-using UnityEditor.Graphing;
-using UnityEditor.ShaderGraph.Drawing.Controls;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -11,6 +9,11 @@ namespace UnityEditor.ShaderGraph
         public IsInfiniteNode()
         {
             name = "Is Infinite";
+        }
+
+        public override string documentationURL
+        {
+            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Is-Infinite-Node"; }
         }
 
         public override bool hasPreview

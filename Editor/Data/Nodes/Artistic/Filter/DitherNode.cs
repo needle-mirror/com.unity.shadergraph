@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 using UnityEngine;
-using UnityEditor.Graphing;
+
 namespace UnityEditor.ShaderGraph
 {
     [Title("Artistic", "Filter", "Dither")]
@@ -11,19 +11,25 @@ namespace UnityEditor.ShaderGraph
             name = "Dither";
             UpdateNodeAfterDeserialization();
         }
+
+        public override string documentationURL
+        {
+            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Dither-Node"; }
+        }
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_Dither", BindingFlags.Static | BindingFlags.NonPublic);
         }
         static string Unity_Dither(
             [Slot(0, Binding.None)] DynamicDimensionVector In,
-            [Slot(1, Binding.ScreenPosition)] Vector2 UV,
+            [Slot(1, Binding.ScreenPosition)] Vector2 ScreenPosition,
             [Slot(2, Binding.None)] out DynamicDimensionVector Out)
         {
             return
                 @"
 {
-    {precision}2 uv = (UV.xy / UV.w) * _ScreenParams.xy;
+    {precision}2 uv = ScreenPosition.xy * _ScreenParams.xy;
     {precision} DITHER_THRESHOLDS[16] =
     {
         1.0 / 17.0,  9.0 / 17.0,  3.0 / 17.0, 11.0 / 17.0,

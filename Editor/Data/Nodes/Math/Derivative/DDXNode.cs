@@ -1,7 +1,5 @@
 using System.Reflection;
 using UnityEngine;
-using UnityEditor.ShaderGraph.Drawing.Controls;
-using UnityEditor.Graphing;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -11,6 +9,11 @@ namespace UnityEditor.ShaderGraph
         public DDXNode()
         {
             name = "DDX";
+        }
+
+        public override string documentationURL
+        {
+            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/DDX-Node"; }
         }
 
         protected override MethodInfo GetFunctionToConvert()

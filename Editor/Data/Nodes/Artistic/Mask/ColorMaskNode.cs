@@ -11,6 +11,11 @@ namespace UnityEditor.ShaderGraph
             name = "Color Mask";
         }
 
+        public override string documentationURL
+        {
+            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Color-Mask-Node"; }
+        }
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_ColorMask", BindingFlags.Static | BindingFlags.NonPublic);
@@ -20,17 +25,14 @@ namespace UnityEditor.ShaderGraph
             [Slot(0, Binding.None)] Vector3 In,
             [Slot(1, Binding.None)] ColorRGB MaskColor,
             [Slot(2, Binding.None)] Vector1 Range,
-            [Slot(3, Binding.None)] out Vector3 Out)
+            [Slot(4, Binding.None)] Vector1 Fuzziness,
+            [Slot(3, Binding.None)] out Vector1 Out)
         {
-            Out = Vector3.zero;
             return
                 @"
 {
-    {precision}3 col = {precision}3(0, 0, 0);
     {precision} Distance = distance(MaskColor, In);
-    if(Distance <= Range)
-        col = {precision}3(1, 1, 1);
-    Out = col;
+    Out = saturate(1 - (Distance - Range) / max(Fuzziness, 1e-5));
 }";
         }
     }

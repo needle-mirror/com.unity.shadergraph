@@ -1,20 +1,31 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using UnityEditor.Experimental.UIElements.GraphView;
 using UnityEditor.Graphing.Util;
 using UnityEngine;
 using UnityEditor.Graphing;
-using UnityEditor.ShaderGraph;
 using UnityEngine.Experimental.UIElements;
 using Edge = UnityEditor.Experimental.UIElements.GraphView.Edge;
-using MouseButton = UnityEngine.Experimental.UIElements.MouseButton;
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
     public sealed class MaterialGraphView : GraphView, IDropTarget
     {
+        public MaterialGraphView()
+        {
+            AddStyleSheetPath("Styles/MaterialGraphView");
+            serializeGraphElements = SerializeGraphElementsImplementation;
+            canPasteSerializedData = CanPasteSerializedDataImplementation;
+            unserializeAndPaste = UnserializeAndPasteImplementation;
+            deleteSelection = DeleteSelectionImplementation;
+        }
+
+        public MaterialGraphView(AbstractMaterialGraph graph) : this()
+        {
+            this.graph = graph;
+        }
+
         public AbstractMaterialGraph graph { get; private set; }
         public Action onConvertToSubgraphClick { get; set; }
 
@@ -57,11 +68,67 @@ namespace UnityEditor.ShaderGraph.Drawing
                 evt.menu.AppendAction("Convert To Sub-graph", ConvertToSubgraph, ConvertToSubgraphStatus);
                 evt.menu.AppendAction("Convert To Inline Node", ConvertToInlineNode, ConvertToInlineNodeStatus);
                 evt.menu.AppendAction("Convert To Property", ConvertToProperty, ConvertToPropertyStatus);
+                if (selection.OfType<MaterialNodeView>().Count() == 1)
+                {
+                    evt.menu.AppendSeparator();
+                    evt.menu.AppendAction("Open Documentation", SeeDocumentation, SeeDocumentationStatus);
+                }
+                if (selection.OfType<MaterialNodeView>().Count() == 1 && selection.OfType<MaterialNodeView>().First().node is SubGraphNode)
+                {
+                    evt.menu.AppendSeparator();
+                    evt.menu.AppendAction("Open Sub Graph", OpenSubGraph, ContextualMenu.MenuAction.AlwaysEnabled);
+                }
             }
             else if (evt.target is BlackboardField)
             {
                 evt.menu.AppendAction("Delete", (e) => DeleteSelectionImplementation("Delete", AskUser.DontAskUser), (e) => canDeleteSelection ? ContextualMenu.MenuAction.StatusFlags.Normal : ContextualMenu.MenuAction.StatusFlags.Disabled);
             }
+            if (evt.target is MaterialGraphView)
+            {
+                evt.menu.AppendAction("Collapse Previews", CollapsePreviews, ContextualMenu.MenuAction.AlwaysEnabled);
+                evt.menu.AppendAction("Expand Previews", ExpandPreviews, ContextualMenu.MenuAction.AlwaysEnabled);
+                evt.menu.AppendSeparator();
+            }
+        }
+
+        void CollapsePreviews(EventBase evt)
+        {
+            graph.owner.RegisterCompleteObjectUndo("Collapse Previews");
+            foreach (AbstractMaterialNode node in graph.GetNodes<AbstractMaterialNode>())
+            {
+                node.previewExpanded = false;
+            }
+        }
+
+        void ExpandPreviews(EventBase evt)
+        {
+            graph.owner.RegisterCompleteObjectUndo("Expand Previews");
+            foreach (AbstractMaterialNode node in graph.GetNodes<AbstractMaterialNode>())
+            {
+                node.previewExpanded = true;
+            }
+        }
+
+        void SeeDocumentation(EventBase evt)
+        {
+            var node = selection.OfType<MaterialNodeView>().First().node;
+            if (node.documentationURL != null)
+                System.Diagnostics.Process.Start(node.documentationURL);
+        }
+
+        void OpenSubGraph(EventBase evt)
+        {
+            SubGraphNode subgraphNode = selection.OfType<MaterialNodeView>().First().node as SubGraphNode;
+
+            var path = AssetDatabase.GetAssetPath(subgraphNode.subGraphAsset);
+            ShaderGraphImporterEditor.ShowGraphEditWindow(path);
+        }
+
+        ContextualMenu.MenuAction.StatusFlags SeeDocumentationStatus(EventBase eventBase)
+        {
+            if (selection.OfType<MaterialNodeView>().First().node.documentationURL == null)
+                return ContextualMenu.MenuAction.StatusFlags.Disabled;
+            return ContextualMenu.MenuAction.StatusFlags.Normal;
         }
 
         ContextualMenu.MenuAction.StatusFlags ConvertToPropertyStatus(EventBase eventBase)
@@ -138,19 +205,6 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         public OnSelectionChanged onSelectionChanged;
 
-        public MaterialGraphView()
-        {
-            serializeGraphElements = SerializeGraphElementsImplementation;
-            canPasteSerializedData = CanPasteSerializedDataImplementation;
-            unserializeAndPaste = UnserializeAndPasteImplementation;
-            deleteSelection = DeleteSelectionImplementation;
-        }
-
-        public MaterialGraphView(AbstractMaterialGraph graph) : this()
-        {
-            this.graph = graph;
-        }
-
         void SelectionChanged()
         {
             var selectedNodes = selection.OfType<MaterialNodeView>().Where(x => x.userData is INode);
@@ -196,8 +250,20 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         void DeleteSelectionImplementation(string operationName, GraphView.AskUser askUser)
         {
+            foreach (var selectable in selection)
+            {
+                var field = selectable as BlackboardField;
+                if (field != null && field.userData != null)
+                {
+                    if (EditorUtility.DisplayDialog("Sub Graph Will Change", "If you remove a property and save the sub graph, you might change other graphs that are using this sub graph.\n\nDo you want to continue?", "Yes", "No"))
+                        break;
+                    return;
+                }
+            }
+
             graph.owner.RegisterCompleteObjectUndo(operationName);
-            graph.RemoveElements(selection.OfType<MaterialNodeView>().Select(x => (INode)x.node), selection.OfType<Edge>().Select(x => x.userData).OfType<IEdge>());
+            graph.RemoveElements(selection.OfType<MaterialNodeView>().Where(v => !(v.node is SubGraphOutputNode)).Select(x => (INode)x.node), selection.OfType<Edge>().Select(x => x.userData).OfType<IEdge>());
+
             foreach (var selectable in selection)
             {
                 var field = selectable as BlackboardField;
@@ -207,6 +273,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                     graph.RemoveShaderProperty(property.guid);
                 }
             }
+
+            selection.Clear();
         }
 
         public bool CanAcceptDrop(List<ISelectable> selection)
@@ -242,7 +310,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 {
                     var remappedNodes = remappedNodesDisposable.value;
                     var remappedEdges = remappedEdgesDisposable.value;
-                    copyGraph.InsertInGraph(graphView.graph, remappedNodes, remappedEdges);
+                    graphView.graph.PasteGraph(copyGraph, remappedNodes, remappedEdges);
 
                     // Add new elements to selection
                     graphView.ClearSelection();

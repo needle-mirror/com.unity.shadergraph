@@ -1,7 +1,7 @@
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEditor.ShaderGraph.Drawing.Controls;
 using UnityEngine;
-using UnityEditor.ShaderGraph;
 using UnityEditor.Graphing;
 
 namespace UnityEditor.ShaderGraph
@@ -53,6 +53,11 @@ namespace UnityEditor.ShaderGraph
             UpdateNodeAfterDeserialization();
         }
 
+        public override string documentationURL
+        {
+            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Constant-Node"; }
+        }
+
         public sealed override void UpdateNodeAfterDeserialization()
         {
             AddSlot(new Vector1MaterialSlot(kOutputSlotId, kOutputSlotName, kOutputSlotName, SlotType.Output, 0));
@@ -61,7 +66,7 @@ namespace UnityEditor.ShaderGraph
 
         public void GenerateNodeCode(ShaderGenerator visitor, GenerationMode generationMode)
         {
-            visitor.AddShaderChunk(precision + " " + GetVariableNameForNode() + " = " + m_constantList[constant] + ";", true);
+            visitor.AddShaderChunk(precision + " " + GetVariableNameForNode() + " = " + m_constantList[constant].ToString(CultureInfo.InvariantCulture) + ";", true);
         }
 
         public override string GetVariableNameForSlot(int slotId)

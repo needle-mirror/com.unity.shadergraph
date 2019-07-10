@@ -1,16 +1,15 @@
 ﻿﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor.Experimental.UIElements.GraphView;
 using UnityEngine.Experimental.UIElements;
-using UnityEditor.Experimental.UIElements;
+#if UNITY_2018_1
+using GeometryChangedEvent = UnityEngine.Experimental.UIElements.PostLayoutEvent;
+#endif
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
     public class WindowDraggable : MouseManipulator
     {
-        bool m_ResizeWithParentWindow;
-
         bool m_Active;
 
         WindowDockingLayout m_WindowDockingLayout;
@@ -19,13 +18,13 @@ namespace UnityEditor.ShaderGraph.Drawing
         Rect m_PreviousParentRect;
 
         VisualElement m_Handle;
+        GraphView m_GraphView;
 
         public Action OnDragFinished;
 
-        public WindowDraggable(VisualElement handle = null, bool resizeWithParentwindow = false)
+        public WindowDraggable(VisualElement handle = null)
         {
             m_Handle = handle;
-            m_ResizeWithParentWindow = resizeWithParentwindow;
             m_Active = false;
             m_PreviousParentRect = new Rect(0f, 0f, 0f, 0f);
             m_WindowDockingLayout = new WindowDockingLayout();
@@ -38,7 +37,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_Handle.RegisterCallback(new EventCallback<MouseDownEvent>(OnMouseDown), Capture.NoCapture);
             m_Handle.RegisterCallback(new EventCallback<MouseMoveEvent>(OnMouseMove), Capture.NoCapture);
             m_Handle.RegisterCallback(new EventCallback<MouseUpEvent>(OnMouseUp), Capture.NoCapture);
-            target.RegisterCallback<PostLayoutEvent>(InitialLayoutSetup);
+            target.RegisterCallback<GeometryChangedEvent>(InitialLayoutSetup);
         }
 
         protected override void UnregisterCallbacksFromTarget()
@@ -46,6 +45,10 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_Handle.UnregisterCallback(new EventCallback<MouseDownEvent>(OnMouseDown), Capture.NoCapture);
             m_Handle.UnregisterCallback(new EventCallback<MouseMoveEvent>(OnMouseMove), Capture.NoCapture);
             m_Handle.UnregisterCallback(new EventCallback<MouseUpEvent>(OnMouseUp), Capture.NoCapture);
+            target.UnregisterCallback<GeometryChangedEvent>(InitialLayoutSetup);
+            target.UnregisterCallback<GeometryChangedEvent>(OnGeometryChanged);
+            if (m_GraphView != null)
+                m_GraphView.UnregisterCallback<GeometryChangedEvent>(OnGeometryChanged);
         }
 
         void OnMouseDown(MouseDownEvent evt)
@@ -66,7 +69,6 @@ namespace UnityEditor.ShaderGraph.Drawing
                 target.layout = layout;
             }
         }
-
 
         void OnMouseUp(MouseUpEvent evt)
         {
@@ -89,20 +91,25 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
         }
 
-        void InitialLayoutSetup(PostLayoutEvent postLayoutEvent)
+        void InitialLayoutSetup(GeometryChangedEvent GeometryChangedEvent)
         {
             m_PreviousParentRect = target.parent.layout;
-            target.UnregisterCallback<PostLayoutEvent>(InitialLayoutSetup);
-            target.RegisterCallback<PostLayoutEvent>(OnPostLayout);
+            target.UnregisterCallback<GeometryChangedEvent>(InitialLayoutSetup);
+            target.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
+
+            VisualElement parent = target.parent;
+            while (parent != null && !(parent is GraphView))
+                parent = parent.parent;
+            m_GraphView = parent as GraphView;
+            if (m_GraphView != null)
+                m_GraphView.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
 
             m_WindowDockingLayout.CalculateDockingCornerAndOffset(target.layout, target.parent.layout);
         }
 
-        void OnPostLayout(PostLayoutEvent postLayoutEvent)
+        void OnGeometryChanged(GeometryChangedEvent GeometryChangedEvent)
         {
             Rect windowRect = target.layout;
-
-            Vector2 scaling = target.parent.layout.size / m_PreviousParentRect.size;
 
             Vector2 minSize = new Vector2(60f, 60f);
 
@@ -118,28 +125,9 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             Vector2 distanceFromParentEdge = Vector2.zero;
             distanceFromParentEdge.x = m_WindowDockingLayout.dockingLeft ? target.layout.x : (m_PreviousParentRect.width - target.layout.x - target.layout.width);
-            distanceFromParentEdge.y = m_WindowDockingLayout.dockingTop ? target.layout.y: (m_PreviousParentRect.height - target.layout.y - target.layout.height);
+            distanceFromParentEdge.y = m_WindowDockingLayout.dockingTop ? target.layout.y : (m_PreviousParentRect.height - target.layout.y - target.layout.height);
 
-            Vector2 normalizedDistanceFromEdge = distanceFromParentEdge / m_PreviousParentRect.size;
-
-            if (m_ResizeWithParentWindow)
-            {
-                if (scaling.x > 1f)
-                {
-                    scaling.x = target.parent.layout.width * .33f < minSize.x ? 1f : scaling.x;
-                }
-
-                if (scaling.y > 1f)
-                {
-                    scaling.y = target.parent.layout.height * .33f < minSize.y ? 1f : scaling.y;
-                }
-
-                windowRect.size *= scaling;
-            }
-            else
-            {
-                normalizedDistanceFromEdge = distanceFromParentEdge / target.parent.layout.size;
-            }
+            Vector2 normalizedDistanceFromEdge = distanceFromParentEdge / target.parent.layout.size;
 
             if (m_WindowDockingLayout.dockingLeft)
             {
@@ -156,11 +144,11 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
             else
             {
-                windowRect.y = (1f - normalizedDistanceFromEdge.y) * target.parent.layout.height- windowRect.height;
+                windowRect.y = (1f - normalizedDistanceFromEdge.y) * target.parent.layout.height - windowRect.height;
             }
 
-            windowRect.width = Mathf.Max(Mathf.Min(windowRect.width, target.parent.layout.width), minSize.x);
-            windowRect.height = Mathf.Max(Mathf.Min(windowRect.height, target.parent.layout.height), minSize.y);
+            windowRect.width = Mathf.Max(windowRect.width, minSize.x);
+            windowRect.height = Mathf.Max(windowRect.height, minSize.y);
 
             float maximumXPosition = Mathf.Max(target.parent.layout.width - windowRect.width, 0f);
             float maximumYPosition = Mathf.Max(target.parent.layout.height - windowRect.height, 0f);

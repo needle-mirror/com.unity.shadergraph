@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEditor.Graphing;
@@ -9,7 +8,7 @@ namespace UnityEditor.ShaderGraph
     [Title("Channel", "Split")]
     public class SplitNode : AbstractMaterialNode, IGeneratesBodyCode
     {
-        const string kInputSlotName = "Input";
+        const string kInputSlotName = "In";
         const string kOutputSlotRName = "R";
         const string kOutputSlotGName = "G";
         const string kOutputSlotBName = "B";
@@ -25,6 +24,11 @@ namespace UnityEditor.ShaderGraph
         {
             name = "Split";
             UpdateNodeAfterDeserialization();
+        }
+
+        public override string documentationURL
+        {
+            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Split-Node"; }
         }
 
         public sealed override void UpdateNodeAfterDeserialization()

@@ -1,7 +1,5 @@
 using System.Reflection;
 using UnityEngine;
-using UnityEditor.Graphing;
-using UnityEditor.ShaderGraph.Drawing.Controls;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -11,6 +9,11 @@ namespace UnityEditor.ShaderGraph
         public IsNanNode()
         {
             name = "Is NaN";
+        }
+
+        public override string documentationURL
+        {
+            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Is-NaN-Node"; }
         }
 
         public override bool hasPreview
@@ -30,7 +33,7 @@ namespace UnityEditor.ShaderGraph
             return
                 @"
 {
-    Out = isnan(In);
+    Out = (In < 0.0 || In > 0.0 || In == 0.0) ? 0 : 1;
 }
 ";
         }

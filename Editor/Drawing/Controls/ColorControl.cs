@@ -3,8 +3,6 @@ using System.Reflection;
 using UnityEditor.Experimental.UIElements;
 using UnityEngine;
 using UnityEngine.Experimental.UIElements;
-using UnityEngine.Experimental.UIElements.StyleSheets;
-using UnityEditor.ShaderGraph;
 using Color = UnityEditor.ShaderGraph.ColorNode.Color;
 
 namespace UnityEditor.ShaderGraph.Drawing.Controls
@@ -39,6 +37,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Controls
         {
             m_Node = node;
             m_PropertyInfo = propertyInfo;
+            AddStyleSheetPath("Styles/Controls/ColorControlView");
             if (propertyInfo.PropertyType != typeof(Color))
                 throw new ArgumentException("Property must be of type Color.", "propertyInfo");
             label = label ?? ObjectNames.NicifyVariableName(propertyInfo.Name);

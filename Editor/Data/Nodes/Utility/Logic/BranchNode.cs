@@ -1,7 +1,5 @@
 using System.Reflection;
 using UnityEngine;
-using UnityEditor.Graphing;
-using UnityEditor.ShaderGraph.Drawing.Controls;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -11,6 +9,11 @@ namespace UnityEditor.ShaderGraph
         public BranchNode()
         {
             name = "Branch";
+        }
+
+        public override string documentationURL
+        {
+            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Branch-Node"; }
         }
 
         protected override MethodInfo GetFunctionToConvert()
@@ -27,7 +30,7 @@ namespace UnityEditor.ShaderGraph
             return
                 @"
 {
-    Out = (Predicate * True) + abs((Predicate - 1) * False);
+    Out = lerp(False, True, Predicate);
 }
 ";
         }

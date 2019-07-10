@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using UnityEngine;
-using UnityEditor.Graphing;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -10,6 +9,11 @@ namespace UnityEditor.ShaderGraph
         public NormalStrengthNode()
         {
             name = "Normal Strength";
+        }
+
+        public override string documentationURL
+        {
+            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Normal-Strength-Node"; }
         }
 
         protected override MethodInfo GetFunctionToConvert()

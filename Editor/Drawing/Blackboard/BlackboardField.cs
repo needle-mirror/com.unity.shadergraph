@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEditor.Experimental.UIElements.GraphView;
+using UnityEditor.Graphing.Util;
 using UnityEngine;
 using UnityEngine.Experimental.UIElements;
 
@@ -53,7 +54,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         public BlackboardField()
             : this(null, "", "") { }
 
-        static Type s_ContextualMenuManipulator = AppDomain.CurrentDomain.GetAssemblies().SelectMany(x => x.GetTypes()).FirstOrDefault(t => t.FullName == "UnityEngine.Experimental.UIElements.ContextualMenuManipulator");
+        static Type s_ContextualMenuManipulator = AppDomain.CurrentDomain.GetAssemblies().SelectMany(x => x.GetTypesOrNothing()).FirstOrDefault(t => t.FullName == "UnityEngine.Experimental.UIElements.ContextualMenuManipulator");
 
         public BlackboardField(Texture icon, string text, string typeText)
         {
@@ -107,13 +108,12 @@ namespace UnityEditor.ShaderGraph.Drawing
             if (dropTarget == null || !dropTarget.CanAcceptDrop(selection))
                 return;
 
-            var propagation = EventPropagation.Continue;
             if (evt.imguiEvent.type == EventType.DragUpdated)
-                propagation = dropTarget.DragUpdated(evt, selection, dropTarget);
+                dropTarget.DragUpdated(evt, selection, dropTarget);
             else if (evt.imguiEvent.type == EventType.DragPerform)
-                propagation = dropTarget.DragPerform(evt, selection, dropTarget);
+                dropTarget.DragPerform(evt, selection, dropTarget);
             else if (evt.imguiEvent.type == EventType.DragExited)
-                propagation = dropTarget.DragExited();
+                dropTarget.DragExited();
 
 //            if (propagation == EventPropagation.Stop)
 //                evt.StopPropagation();

@@ -1,6 +1,5 @@
 using System.Reflection;
 using UnityEngine;
-using UnityEditor.Graphing;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -10,6 +9,11 @@ namespace UnityEditor.ShaderGraph
         public TwirlNode()
         {
             name = "Twirl";
+        }
+
+        public override string documentationURL
+        {
+            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Twirl-Node"; }
         }
 
         protected override MethodInfo GetFunctionToConvert()

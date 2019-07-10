@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using UnityEditor.Experimental.UIElements;
 using UnityEditor.Experimental.UIElements.GraphView;
 using UnityEditor.Graphing;
+using UnityEditor.Graphing.Util;
 using UnityEngine;
 using UnityEngine.Experimental.UIElements;
 
@@ -56,24 +56,32 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             // First build up temporary data structure containing group & title as an array of strings (the last one is the actual title) and associated node type.
             var nodeEntries = new List<NodeEntry>();
-            foreach (var type in Assembly.GetAssembly(typeof(AbstractMaterialNode)).GetTypes())
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                if (type.IsClass && !type.IsAbstract && (type.IsSubclassOf(typeof(AbstractMaterialNode))) && type != typeof(PropertyNode))
+                foreach (var type in assembly.GetTypesOrNothing())
                 {
-                    var attrs = type.GetCustomAttributes(typeof(TitleAttribute), false) as TitleAttribute[];
-                    if (attrs != null && attrs.Length > 0)
+                    if (type.IsClass && !type.IsAbstract && (type.IsSubclassOf(typeof(AbstractMaterialNode)))
+                        && type != typeof(PropertyNode)
+                        && type != typeof(SubGraphNode))
                     {
-                        var node = (AbstractMaterialNode) Activator.CreateInstance(type);
-                        AddEntries(node, attrs[0].title, nodeEntries);
+                        var attrs = type.GetCustomAttributes(typeof(TitleAttribute), false) as TitleAttribute[];
+                        if (attrs != null && attrs.Length > 0)
+                        {
+                            var node = (AbstractMaterialNode)Activator.CreateInstance(type);
+                            AddEntries(node, attrs[0].title, nodeEntries);
+                        }
                     }
                 }
             }
 
-            foreach (var guid in AssetDatabase.FindAssets(string.Format("t:{0}", typeof(MaterialSubGraphAsset))))
+            if (!(m_Graph is SubGraph))
             {
-                var asset = AssetDatabase.LoadAssetAtPath<MaterialSubGraphAsset>(AssetDatabase.GUIDToAssetPath(guid));
-                var node = new SubGraphNode { subGraphAsset = asset };
-                AddEntries(node, new [] { "Sub-graph Assets", asset.name }, nodeEntries);
+                foreach (var guid in AssetDatabase.FindAssets(string.Format("t:{0}", typeof(MaterialSubGraphAsset))))
+                {
+                    var asset = AssetDatabase.LoadAssetAtPath<MaterialSubGraphAsset>(AssetDatabase.GUIDToAssetPath(guid));
+                    var node = new SubGraphNode { subGraphAsset = asset };
+                    AddEntries(node, new[] { "Sub-graph Assets", asset.name }, nodeEntries);
+                }
             }
 
             foreach (var property in m_Graph.properties)
@@ -165,6 +173,10 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         void AddEntries(AbstractMaterialNode node, string[] title, List<NodeEntry> nodeEntries)
         {
+            if (m_Graph is SubGraph && !node.allowedInSubGraph)
+                return;
+            if (m_Graph is MaterialGraph && !node.allowedInMainGraph)
+                return;
             if (connectedPort == null)
             {
                 nodeEntries.Add(new NodeEntry

@@ -1,6 +1,6 @@
 using System;
-using UnityEditor.Graphing;
-using UnityEngine;
+using UnityEditor.ShaderGraph.Drawing.Slots;
+using UnityEngine.Experimental.UIElements;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -14,6 +14,11 @@ namespace UnityEditor.ShaderGraph
                                   ShaderStage shaderStage = ShaderStage.Dynamic, bool hidden = false)
             : base(slotId, displayName, shaderOutputName, space, shaderStage, hidden)
         {}
+
+        public override VisualElement InstantiateControl()
+        {
+            return new LabelSlotControlView(space + " Space");
+        }
 
         public override string GetDefaultValue(GenerationMode generationMode)
         {

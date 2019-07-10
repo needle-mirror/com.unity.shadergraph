@@ -1,10 +1,7 @@
 using System;
 using System.Reflection;
-using UnityEditor.Experimental.UIElements;
 using UnityEngine;
 using UnityEngine.Experimental.UIElements;
-using UnityEngine.Experimental.UIElements.StyleSheets;
-using UnityEditor.ShaderGraph;
 
 namespace UnityEditor.ShaderGraph.Drawing.Controls
 {
@@ -51,6 +48,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Controls
         {
             m_Node = node;
             m_PropertyInfo = propertyInfo;
+            AddStyleSheetPath("Styles/Controls/ChannelMixerControlView");
             m_ChannelMixer = (ChannelMixerNode.ChannelMixer)m_PropertyInfo.GetValue(m_Node, null);
             m_OutChannel = 0;
 

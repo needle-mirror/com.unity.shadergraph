@@ -8,6 +8,9 @@ using UnityEditor.Graphing;
 using UnityEditor.ShaderGraph.Drawing.Inspector;
 using Edge = UnityEditor.Experimental.UIElements.GraphView.Edge;
 using Object = UnityEngine.Object;
+#if UNITY_2018_1
+using GeometryChangedEvent = UnityEngine.Experimental.UIElements.PostLayoutEvent;
+#endif
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
@@ -16,6 +19,7 @@ namespace UnityEditor.ShaderGraph.Drawing
     {
         public WindowDockingLayout previewLayout = new WindowDockingLayout();
         public WindowDockingLayout blackboardLayout = new WindowDockingLayout();
+        public Vector2 masterPreviewSize = new Vector2(400, 400);
     }
 
     public class GraphEditorView : VisualElement, IDisposable
@@ -31,7 +35,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         EdgeConnectorListener m_EdgeConnectorListener;
         BlackboardProvider m_BlackboardProvider;
 
-        string m_FloatingWindowsLayoutKey;
+        const string k_FloatingWindowsLayoutKey = "UnityEditor.ShaderGraph.FloatingWindowsLayout";
         FloatingWindowsLayout m_FloatingWindowsLayout;
 
         public Action saveRequested { get; set; }
@@ -58,9 +62,17 @@ namespace UnityEditor.ShaderGraph.Drawing
         public GraphEditorView(EditorWindow editorWindow, AbstractMaterialGraph graph, string assetName)
         {
             m_Graph = graph;
-            AddStyleSheetPath("Styles/MaterialGraph");
+            AddStyleSheetPath("Styles/GraphEditorView");
             m_EditorWindow = editorWindow;
             previewManager = new PreviewManager(graph);
+            string serializedWindowLayout = EditorUserSettings.GetConfigValue(k_FloatingWindowsLayoutKey);
+            if (!string.IsNullOrEmpty(serializedWindowLayout))
+            {
+                m_FloatingWindowsLayout = JsonUtility.FromJson<FloatingWindowsLayout>(serializedWindowLayout);
+                if (m_FloatingWindowsLayout.masterPreviewSize.x > 0f && m_FloatingWindowsLayout.masterPreviewSize.y > 0f)
+                    previewManager.ResizeMasterPreview(m_FloatingWindowsLayout.masterPreviewSize);
+            }
+            previewManager.RenderPreviews();
 
             var toolbar = new IMGUIContainer(() =>
             {
@@ -93,6 +105,10 @@ namespace UnityEditor.ShaderGraph.Drawing
                 m_GraphView.RegisterCallback<KeyDownEvent>(OnSpaceDown);
                 content.Add(m_GraphView);
 
+                // Uncomment to enable pixel caching profiler
+//                m_ProfilerView = new PixelCacheProfilerView(this);
+//                m_GraphView.Add(m_ProfilerView);
+
                 m_BlackboardProvider = new BlackboardProvider(assetName, graph);
                 m_GraphView.Add(m_BlackboardProvider.blackboard);
                 m_BlackboardProvider.blackboard.layout = new Rect(new Vector2(10f, 10f), m_BlackboardProvider.blackboard.layout.size);
@@ -116,7 +132,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
                 m_GraphView.graphViewChanged = GraphViewChanged;
 
-                RegisterCallback<PostLayoutEvent>(ApplySerializewindowLayouts);
+                RegisterCallback<GeometryChangedEvent>(ApplySerializewindowLayouts);
             }
 
             m_SearchWindowProvider = ScriptableObject.CreateInstance<SearchWindowProvider>();
@@ -150,6 +166,15 @@ namespace UnityEditor.ShaderGraph.Drawing
                 Vector2 screenPoint = m_EditorWindow.position.position + referencePosition;
 
                 graphView.nodeCreationRequest(new NodeCreationContext() { screenMousePosition = screenPoint });
+            }
+            else if (evt.keyCode == KeyCode.F1)
+            {
+                if (m_GraphView.selection.OfType<MaterialNodeView>().Count() == 1)
+                {
+                    var nodeView = (MaterialNodeView)graphView.selection.First();
+                    if(nodeView.node.documentationURL != null)
+                        System.Diagnostics.Process.Start(nodeView.node.documentationURL);
+                }
             }
         }
 
@@ -243,7 +268,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             foreach (var node in m_Graph.removedNodes)
             {
-                node.onModified -= OnNodeChanged;
+                node.UnregisterCallback(OnNodeChanged);
                 var nodeView = m_GraphView.nodes.ToList().OfType<MaterialNodeView>().FirstOrDefault(p => p.node != null && p.node.guid == node.guid);
                 if (nodeView != null)
                 {
@@ -254,7 +279,15 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
 
             foreach (var node in m_Graph.addedNodes)
+            {
                 AddNode(node);
+            }
+
+            foreach (var node in m_Graph.pastedNodes)
+            {
+                var nodeView = m_GraphView.nodes.ToList().OfType<MaterialNodeView>().FirstOrDefault(p => p.node != null && p.node.guid == node.guid);
+                m_GraphView.AddToSelection(nodeView);
+            }
 
             var nodesToUpdate = m_NodeViewHashSet;
             nodesToUpdate.Clear();
@@ -290,6 +323,9 @@ namespace UnityEditor.ShaderGraph.Drawing
                 node.UpdatePortInputVisibilities();
 
             UpdateEdgeColors(nodesToUpdate);
+
+            if (m_ProfilerView != null)
+                m_ProfilerView.Profile();
         }
 
         void AddNode(INode node)
@@ -297,7 +333,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             var nodeView = new MaterialNodeView { userData = node };
             m_GraphView.AddElement(nodeView);
             nodeView.Initialize(node as AbstractMaterialNode, m_PreviewManager, m_EdgeConnectorListener);
-            node.onModified += OnNodeChanged;
+            node.RegisterCallback(OnNodeChanged);
             nodeView.Dirty(ChangeType.Repaint);
 
             if (m_SearchWindowProvider.nodeNeedsRepositioning && m_SearchWindowProvider.targetSlotReference.nodeGuid.Equals(node.guid))
@@ -310,19 +346,19 @@ namespace UnityEditor.ShaderGraph.Drawing
                         continue;
                     if (port.slot.slotReference.Equals(m_SearchWindowProvider.targetSlotReference))
                     {
-                        port.RegisterCallback<PostLayoutEvent>(RepositionNode);
+                        port.RegisterCallback<GeometryChangedEvent>(RepositionNode);
                         return;
                     }
                 }
             }
         }
 
-        static void RepositionNode(PostLayoutEvent evt)
+        static void RepositionNode(GeometryChangedEvent evt)
         {
             var port = evt.target as ShaderPort;
             if (port == null)
                 return;
-            port.UnregisterCallback<PostLayoutEvent>(RepositionNode);
+            port.UnregisterCallback<GeometryChangedEvent>(RepositionNode);
             var nodeView = port.node as MaterialNodeView;
             if (nodeView == null)
                 return;
@@ -384,6 +420,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         }
 
         Stack<MaterialNodeView> m_NodeStack = new Stack<MaterialNodeView>();
+        PixelCacheProfilerView m_ProfilerView;
 
         void UpdateEdgeColors(HashSet<MaterialNodeView> nodeViews)
         {
@@ -400,7 +437,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                     foreach (var edgeView in anchorView.connections.OfType<Edge>())
                     {
                         var targetSlot = edgeView.input.GetSlot();
-                        if (targetSlot.valueType == SlotValueType.Dynamic)
+                        if (targetSlot.valueType == SlotValueType.DynamicVector || targetSlot.valueType == SlotValueType.DynamicMatrix || targetSlot.valueType == SlotValueType.Dynamic)
                         {
                             var connectedNodeView = edgeView.input.node as MaterialNodeView;
                             if (connectedNodeView != null && !nodeViews.Contains(connectedNodeView))
@@ -414,7 +451,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 foreach (var anchorView in nodeView.inputContainer.Children().OfType<Port>())
                 {
                     var targetSlot = anchorView.GetSlot();
-                    if (targetSlot.valueType != SlotValueType.Dynamic)
+                    if (targetSlot.valueType != SlotValueType.DynamicVector)
                         continue;
                     foreach (var edgeView in anchorView.connections.OfType<Edge>())
                     {
@@ -429,21 +466,16 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
         }
 
-        void ApplySerializewindowLayouts(PostLayoutEvent evt)
+        void ApplySerializewindowLayouts(GeometryChangedEvent evt)
         {
-            UnregisterCallback<PostLayoutEvent>(ApplySerializewindowLayouts);
+            UnregisterCallback<GeometryChangedEvent>(ApplySerializewindowLayouts);
 
-            m_FloatingWindowsLayoutKey = "UnityEditor.ShaderGraph.FloatingWindowsLayout";
-            string serializedWindowLayout = EditorUserSettings.GetConfigValue(m_FloatingWindowsLayoutKey);
-
-            if (!String.IsNullOrEmpty(serializedWindowLayout))
+            if (m_FloatingWindowsLayout != null)
             {
-                m_FloatingWindowsLayout = JsonUtility.FromJson<FloatingWindowsLayout>(serializedWindowLayout);
-
                 m_MasterPreviewView.layout = m_FloatingWindowsLayout.previewLayout.GetLayout(layout);
                 m_BlackboardProvider.blackboard.layout = m_FloatingWindowsLayout.blackboardLayout.GetLayout(layout);
 
-                m_MasterPreviewView.UpdateRenderTextureOnNextLayoutChange();
+                previewManager.ResizeMasterPreview(m_FloatingWindowsLayout.masterPreviewSize);
             }
             else
             {
@@ -453,11 +485,14 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         void UpdateSerializedWindowLayout()
         {
+            if (m_FloatingWindowsLayout == null)
+                m_FloatingWindowsLayout = new FloatingWindowsLayout();
             m_FloatingWindowsLayout.previewLayout.CalculateDockingCornerAndOffset(m_MasterPreviewView.layout, layout);
             m_FloatingWindowsLayout.blackboardLayout.CalculateDockingCornerAndOffset(m_BlackboardProvider.blackboard.layout, layout);
+            m_FloatingWindowsLayout.masterPreviewSize = m_MasterPreviewView.Q("preview").layout.size;
 
             string serializedWindowLayout = JsonUtility.ToJson(m_FloatingWindowsLayout);
-            EditorUserSettings.SetConfigValue(m_FloatingWindowsLayoutKey, serializedWindowLayout);
+            EditorUserSettings.SetConfigValue(k_FloatingWindowsLayoutKey, serializedWindowLayout);
 
             m_MasterPreviewView.RefreshRenderTextureSize();
         }

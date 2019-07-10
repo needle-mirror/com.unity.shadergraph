@@ -25,6 +25,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         Texture2D m_ErrorTexture;
         Shader m_UberShader;
         string m_OutputIdName;
+        Vector2? m_NewMasterPreviewSize;
 
         public PreviewRenderData masterRenderData
         {
@@ -51,9 +52,17 @@ namespace UnityEditor.ShaderGraph.Drawing
             {
                 renderTexture = new RenderTexture(400, 400, 16, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default) { hideFlags = HideFlags.HideAndDontSave }
             };
+            m_MasterRenderData.renderTexture.Create();
 
             foreach (var node in m_Graph.GetNodes<INode>())
                 AddPreview(node);
+        }
+
+        public void ResizeMasterPreview(Vector2 newSize)
+        {
+            m_NewMasterPreviewSize = newSize;
+            if (masterRenderData.shaderData != null)
+                m_DirtyPreviews.Add(masterRenderData.shaderData.node.tempId.index);
         }
 
         public PreviewRenderData GetPreview(AbstractMaterialNode node)
@@ -72,10 +81,11 @@ namespace UnityEditor.ShaderGraph.Drawing
                 shaderData = shaderData,
                 renderTexture = new RenderTexture(200, 200, 16, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default) { hideFlags = HideFlags.HideAndDontSave }
             };
+            renderData.renderTexture.Create();
             Set(m_Identifiers, node.tempId, node.tempId);
             Set(m_RenderDatas, node.tempId, renderData);
             m_DirtyShaders.Add(node.tempId.index);
-            node.onModified += OnNodeModified;
+            node.RegisterCallback(OnNodeModified);
             if (node.RequiresTime())
                 m_TimeDependentPreviews.Add(node.tempId.index);
 
@@ -276,9 +286,19 @@ namespace UnityEditor.ShaderGraph.Drawing
             var renderMasterPreview = masterRenderData.shaderData != null && m_DirtyPreviews.Contains(masterRenderData.shaderData.node.tempId.index);
             if (renderMasterPreview)
             {
+                if (m_NewMasterPreviewSize.HasValue)
+                {
+                    if (masterRenderData.renderTexture != null)
+                        Object.DestroyImmediate(masterRenderData.renderTexture, true);
+                    masterRenderData.renderTexture = new RenderTexture((int)m_NewMasterPreviewSize.Value.x, (int)m_NewMasterPreviewSize.Value.y, 16, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default) { hideFlags = HideFlags.HideAndDontSave };
+                    masterRenderData.renderTexture.Create();
+                    masterRenderData.texture = masterRenderData.renderTexture;
+                    m_NewMasterPreviewSize = null;
+                }
                 var mesh = m_Graph.previewData.serializedMesh.mesh ? m_Graph.previewData.serializedMesh.mesh :  m_SceneResources.sphere;
                 var previewTransform = Matrix4x4.Rotate(m_Graph.previewData.rotation);
-                previewTransform *= Matrix4x4.Scale(Vector3.one * (Vector3.one).magnitude / mesh.bounds.size.magnitude);
+                var scale = m_Graph.previewData.scale;
+                previewTransform *= Matrix4x4.Scale(scale * Vector3.one * (Vector3.one).magnitude / mesh.bounds.size.magnitude);
                 previewTransform *= Matrix4x4.Translate(-mesh.bounds.center);
                 RenderPreview(masterRenderData, mesh, previewTransform);
             }
@@ -306,16 +326,16 @@ namespace UnityEditor.ShaderGraph.Drawing
             {
                 PropagateNodeSet(m_DirtyShaders);
 
-                var masterNodes = new List<MasterNode>();
+                var masterNodes = new List<INode>();
                 var uberNodes = new List<INode>();
                 foreach (var index in m_DirtyShaders)
                 {
                     var node = m_Graph.GetNodeFromTempId(m_Identifiers[index]);
                     if (node == null)
                         continue;
-                    var masterNode = node as MasterNode;
+                    var masterNode = node as IMasterNode;
                     if (masterNode != null)
-                        masterNodes.Add(masterNode);
+                        masterNodes.Add(node);
                     else
                         uberNodes.Add(node);
                 }
@@ -336,7 +356,9 @@ namespace UnityEditor.ShaderGraph.Drawing
                         var results = m_Graph.GetUberPreviewShader();
                         m_OutputIdName = results.outputIdProperty.referenceName;
                         ShaderUtil.UpdateShaderAsset(m_UberShader, results.shader);
-                        File.WriteAllText(Application.dataPath + "/../UberShader.shader", (results.shader ?? "null").Replace("UnityEngine.MaterialGraph", "Generated"));
+                        var debugOutputPath = DefaultShaderIncludes.GetDebugOutputPath();
+                        if (debugOutputPath != null)
+                            File.WriteAllText(debugOutputPath + "/UberShader.shader", (results.shader ?? "null").Replace("UnityEngine.MaterialGraph", "Generated"));
                         bool uberShaderHasError = false;
                         if (MaterialGraphAsset.ShaderHasError(m_UberShader))
                         {
@@ -349,15 +371,14 @@ namespace UnityEditor.ShaderGraph.Drawing
                                 try
                                 {
                                     node = results.sourceMap.FindNode(error.line);
+                                    message.AppendLine("Shader compilation error in {3} at line {1} (on {2}):\n{0}", error.message, error.line, error.platform, node != null ? string.Format("node {0} ({1})", node.name, node.guid) : "graph");
+                                    message.AppendLine(error.messageDetails);
+                                    message.AppendNewLine();
                                 }
-                                catch (Exception e)
+                                catch
                                 {
-                                    Debug.LogException(e);
-                                    continue;
+                                    message.AppendLine("Shader compilation error in {3} at line {1} (on {2}):\n{0}", error.message, error.line, error.platform, "graph");
                                 }
-                                message.AppendLine("{0} in {3} at line {1} (on {2})", error.message, error.line, error.platform, node != null ? string.Format("node {0} ({1})", node.name, node.guid) : "graph");
-                                message.AppendLine(error.messageDetails);
-                                message.AppendNewLine();
                             }
                             Debug.LogWarning(message.ToString());
                             ShaderUtil.ClearShaderErrors(m_UberShader);
@@ -444,7 +465,9 @@ namespace UnityEditor.ShaderGraph.Drawing
                     shaderData.shaderString = m_Graph.GetPreviewShader(node).shader;
             }
 
-            File.WriteAllText(Application.dataPath + "/../GeneratedShader.shader", (shaderData.shaderString ?? "null").Replace("UnityEngine.MaterialGraph", "Generated"));
+            var debugOutputPath = DefaultShaderIncludes.GetDebugOutputPath();
+            if (debugOutputPath != null)
+                File.WriteAllText(debugOutputPath + "/GeneratedShader.shader", (shaderData.shaderString ?? "null").Replace("UnityEngine.MaterialGraph", "Generated"));
 
             if (string.IsNullOrEmpty(shaderData.shaderString))
             {
@@ -469,11 +492,14 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
 
             // Debug output
-            var message = "RecreateShader: " + node.GetVariableNameForNode() + Environment.NewLine + shaderData.shaderString;
             if (MaterialGraphAsset.ShaderHasError(shaderData.shader))
             {
                 shaderData.hasError = true;
-                Debug.LogWarning(message);
+                if (debugOutputPath != null)
+                {
+                    var message = "RecreateShader: " + node.GetVariableNameForNode() + Environment.NewLine + shaderData.shaderString;
+                    Debug.LogWarning(message);
+                }
                 ShaderUtil.ClearShaderErrors(shaderData.shader);
                 Object.DestroyImmediate(shaderData.shader, true);
                 shaderData.shader = null;
@@ -494,7 +520,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 Object.DestroyImmediate(renderData.renderTexture, true);
 
             if (renderData.shaderData != null && renderData.shaderData.node != null)
-                renderData.shaderData.node.onModified -= OnNodeModified;
+                renderData.shaderData.node.UnregisterCallback(OnNodeModified);
         }
 
         void DestroyPreview(Identifier nodeId)

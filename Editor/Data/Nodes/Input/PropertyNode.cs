@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using UnityEditor.ShaderGraph.Drawing.Controls;
 using UnityEngine;
 using UnityEditor.Graphing;
 
@@ -20,6 +19,11 @@ namespace UnityEditor.ShaderGraph
         {
             name = "Property";
             UpdateNodeAfterDeserialization();
+        }
+
+        public override string documentationURL
+        {
+            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Property-Node"; }
         }
 
         private void UpdateNode()

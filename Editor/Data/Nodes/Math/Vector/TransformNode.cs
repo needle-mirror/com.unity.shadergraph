@@ -44,6 +44,11 @@ namespace UnityEditor.ShaderGraph
             UpdateNodeAfterDeserialization();
         }
 
+        public override string documentationURL
+        {
+            get { return "https://github.com/Unity-Technologies/ShaderGraph/wiki/Transform-Node"; }
+        }
+
         [SerializeField]
         CoordinateSpaceConversion m_Conversion = new CoordinateSpaceConversion(CoordinateSpace.Object, CoordinateSpace.World);
 
@@ -169,7 +174,7 @@ namespace UnityEditor.ShaderGraph
             if (requiresTransposeTangentTransform)
                 visitor.AddShaderChunk(string.Format("float3x3 {0} = transpose(float3x3(IN.{1}SpaceTangent, IN.{1}SpaceBiTangent, IN.{1}SpaceNormal));", transposeTargetTransformString, CoordinateSpace.World.ToString()), true);
             else if (requiresTangentTransform)
-                visitor.AddShaderChunk(string.Format("float3x3 {0} = CreateWorldToTangent(IN.{1}SpaceNormal, IN.{1}SpaceTangent, 1);", targetTransformString, tangentTransformSpace), true);
+                visitor.AddShaderChunk(string.Format("float3x3 {0} = float3x3(IN.{1}SpaceTangent, IN.{1}SpaceBiTangent, IN.{1}SpaceNormal);", targetTransformString, tangentTransformSpace), true);
             visitor.AddShaderChunk(string.Format("{0} {1} = {2};", NodeUtils.ConvertConcreteSlotValueTypeToString(precision, FindOutputSlot<MaterialSlot>(OutputSlotId).concreteValueType),
                     GetVariableNameForSlot(OutputSlotId),
                     transformString), true);
