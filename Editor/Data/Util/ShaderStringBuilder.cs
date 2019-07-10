@@ -21,6 +21,7 @@ namespace UnityEditor.ShaderGraph
         public ShaderStringBuilder()
         {
             m_StringBuilder = new StringBuilder();
+            m_ScopeStack = new Stack<ScopeType>();
         }
 
         public void AppendNewLine()
@@ -31,19 +32,27 @@ namespace UnityEditor.ShaderGraph
         public void AppendLine(string value)
         {
             AppendNewLine();
-            AppendIndented(value);
+            AppendIndentation();
+            m_StringBuilder.Append(value);
         }
 
-        [StringFormatMethod("formatStr")]
-        public void AppendLineFormat(string format, params object[] args)
+        [StringFormatMethod("formatString")]
+        public void AppendLine(string formatString, params object[] args)
         {
             AppendNewLine();
-            m_StringBuilder.AppendFormat(format, args);
+            AppendIndentation();
+            m_StringBuilder.AppendFormat(formatString, args);
         }
 
         public void Append(string value)
         {
             m_StringBuilder.Append(value);
+        }
+
+        [StringFormatMethod("formatString")]
+        public void Append(string formatString, params object[] args)
+        {
+            m_StringBuilder.AppendFormat(formatString, args);
         }
 
         public void AppendIndentation()
@@ -52,21 +61,43 @@ namespace UnityEditor.ShaderGraph
                 m_StringBuilder.Append(k_IndentationString);
         }
 
-        public void AppendIndented(string value)
+        public IDisposable IndentScope()
         {
-            AppendIndentation();
-            m_StringBuilder.Append(value);
+            m_ScopeStack.Push(ScopeType.Indent);
+            m_IndentationLevel++;
+            return this;
         }
 
-        public IDisposable Indent()
+        public IDisposable BlockScope()
         {
+            AppendLine("{");
             m_IndentationLevel++;
+            m_ScopeStack.Push(ScopeType.Block);
             return this;
         }
 
         public void Dispose()
         {
-            m_IndentationLevel--;
+            switch (m_ScopeStack.Pop())
+            {
+                case ScopeType.Indent:
+                    m_IndentationLevel--;
+                    break;
+                case ScopeType.Block:
+                    m_IndentationLevel--;
+                    AppendLine("}");
+                    break;
+            }
+        }
+
+        public override string ToString()
+        {
+            return m_StringBuilder.ToString();
+        }
+
+        public string ToString(int startIndex, int length)
+        {
+            return m_StringBuilder.ToString(startIndex, length);
         }
     }
 }

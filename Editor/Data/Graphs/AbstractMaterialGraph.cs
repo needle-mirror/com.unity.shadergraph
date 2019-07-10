@@ -24,12 +24,12 @@ namespace UnityEditor.ShaderGraph
         List<Guid> m_RemovedProperties = new List<Guid>();
 
         [NonSerialized]
-        public InspectorPreviewData previewData = new InspectorPreviewData();
+        InspectorPreviewData m_PreviewData = new InspectorPreviewData();
 
-        public Mesh previewMesh
+        public InspectorPreviewData previewData
         {
-            get { return previewData.mesh; }
-            set { previewData.mesh = value; }
+            get { return m_PreviewData; }
+            set { m_PreviewData = value; }
         }
 
         public IEnumerable<IShaderProperty> properties
@@ -109,17 +109,17 @@ namespace UnityEditor.ShaderGraph
 
         public void RemoveShaderProperty(Guid guid)
         {
+            var propertyNodes = GetNodes<PropertyNode>().Where(x => x.propertyGuid == guid).ToList();
+            foreach (var propNode in propertyNodes)
+                ReplacePropertyNodeWithConcreteNode(propNode);
+
             RemoveShaderPropertyNoValidate(guid);
+
             ValidateGraph();
         }
 
         void RemoveShaderPropertyNoValidate(Guid guid)
         {
-            var propertyNodes = GetNodes<PropertyNode>().Where(x => x.propertyGuid == guid).ToList();
-
-            foreach (var propNode in propertyNodes)
-                ReplacePropertyNodeWithConcreteNode(propNode);
-
             if (m_Properties.RemoveAll(x => x.guid == guid) > 0)
                 m_RemovedProperties.Add(guid);
         }
@@ -227,6 +227,18 @@ namespace UnityEditor.ShaderGraph
                 fullName = "UnityEngine.MaterialGraph.WorldPosNode"
             };
             result[worldPosNode] = SerializationHelper.GetTypeSerializableAsString(typeof(PositionNode));
+
+            var sampleTexture2DNode = new SerializationHelper.TypeSerializationInfo
+            {
+                fullName = "UnityEditor.ShaderGraph.Texture2DNode"
+            };
+            result[sampleTexture2DNode] = SerializationHelper.GetTypeSerializableAsString(typeof(SampleTexture2DNode));
+
+            var sampleCubemapNode = new SerializationHelper.TypeSerializationInfo
+            {
+                fullName = "UnityEditor.ShaderGraph.CubemapNode"
+            };
+            result[sampleCubemapNode] = SerializationHelper.GetTypeSerializableAsString(typeof(SampleCubemapNode));
 
             return result;
         }
@@ -360,7 +372,7 @@ namespace UnityEditor.ShaderGraph
             {
                 vertexInputs.AddShaderChunk("float4 color : COLOR;", false);
             }
-            
+
             foreach (var channel in graphRequiements.requiresMeshUVs.Distinct())
             {
                 vertexInputs.AddShaderChunk(string.Format("float4 texcoord{0} : TEXCOORD{1};", ((int)channel).ToString(), vertexInputIndex.ToString()), false);
