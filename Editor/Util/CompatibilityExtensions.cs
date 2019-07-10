@@ -1,9 +1,6 @@
 using System;
 using UnityEngine;
 using UnityEngine.Experimental.UIElements;
-#if UNITY_2018_3_OR_NEWER
-using ContextualMenu = UnityEngine.Experimental.UIElements.DropdownMenu;
-#endif
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
