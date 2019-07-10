@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.Experimental.UIElements;
 using UnityEngine.Experimental.UIElements.StyleSheets;
@@ -330,7 +330,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_ResizeBeginMousePosition = mouseDownEvent.mousePosition;
 
             m_Dragging = true;
-            this.TakeMouseCapture();
+            this.CaptureMouse();
             mouseDownEvent.StopPropagation();
         }
 
@@ -339,7 +339,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_Dragging = false;
 
             if (this.HasMouseCapture())
-                this.ReleaseMouseCapture();
+                this.ReleaseMouse();
 
             if (OnResizeFinished != null)
                 OnResizeFinished();
@@ -348,7 +348,11 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_WindowDockingLayout.ApplyPosition(m_Container);
         }
 
+#if UNITY_2018_3_OR_NEWER
+        protected override void DoRepaint(IStylePainter painter)
+#else
         public override void DoRepaint()
+#endif
         {
             if (m_StyleWidget == null)
             {
