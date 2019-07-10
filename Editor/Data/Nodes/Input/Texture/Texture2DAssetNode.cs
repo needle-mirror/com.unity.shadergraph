@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEditor.ShaderGraph.Drawing.Controls;
 using UnityEngine;
 using UnityEditor.Graphing;
@@ -58,7 +58,7 @@ namespace UnityEditor.ShaderGraph
 
         public override void CollectPreviewMaterialProperties(List<PreviewProperty> properties)
         {
-            properties.Add(new PreviewProperty(PropertyType.Texture)
+            properties.Add(new PreviewProperty(PropertyType.Texture2D)
             {
                 name = GetVariableNameForSlot(OutputSlotId),
                 textureValue = texture

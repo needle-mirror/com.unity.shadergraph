@@ -13,6 +13,7 @@ namespace UnityEditor.ShaderGraph
         public NeededCoordinateSpace requiresPosition;
         public bool requiresScreenPosition;
         public bool requiresVertexColor;
+        public bool requiresFaceSign;
         public List<UVChannel> requiresMeshUVs;
 
         public static ShaderGraphRequirements none
@@ -45,6 +46,7 @@ namespace UnityEditor.ShaderGraph
             newReqs.requiresPosition = other.requiresPosition | requiresPosition;
             newReqs.requiresScreenPosition = other.requiresScreenPosition | requiresScreenPosition;
             newReqs.requiresVertexColor = other.requiresVertexColor | requiresVertexColor;
+            newReqs.requiresFaceSign = other.requiresFaceSign | requiresFaceSign;
 
             newReqs.requiresMeshUVs = new List<UVChannel>();
             if (requiresMeshUVs != null)
@@ -54,15 +56,17 @@ namespace UnityEditor.ShaderGraph
             return newReqs;
         }
 
-        public static ShaderGraphRequirements FromNodes(List<INode> nodes)
+        public static ShaderGraphRequirements FromNodes<T>(List<T> nodes, ShaderStageCapability stageCapability = ShaderStageCapability.All, bool includeIntermediateSpaces = true)
+            where T : class, INode
         {
-            NeededCoordinateSpace requiresNormal = nodes.OfType<IMayRequireNormal>().Aggregate(NeededCoordinateSpace.None, (mask, node) => mask | node.RequiresNormal());
-            NeededCoordinateSpace requiresBitangent = nodes.OfType<IMayRequireBitangent>().Aggregate(NeededCoordinateSpace.None, (mask, node) => mask | node.RequiresBitangent());
-            NeededCoordinateSpace requiresTangent = nodes.OfType<IMayRequireTangent>().Aggregate(NeededCoordinateSpace.None, (mask, node) => mask | node.RequiresTangent());
-            NeededCoordinateSpace requiresViewDir = nodes.OfType<IMayRequireViewDirection>().Aggregate(NeededCoordinateSpace.None, (mask, node) => mask | node.RequiresViewDirection());
-            NeededCoordinateSpace requiresPosition = nodes.OfType<IMayRequirePosition>().Aggregate(NeededCoordinateSpace.None, (mask, node) => mask | node.RequiresPosition());
+            NeededCoordinateSpace requiresNormal = nodes.OfType<IMayRequireNormal>().Aggregate(NeededCoordinateSpace.None, (mask, node) => mask | node.RequiresNormal(stageCapability));
+            NeededCoordinateSpace requiresBitangent = nodes.OfType<IMayRequireBitangent>().Aggregate(NeededCoordinateSpace.None, (mask, node) => mask | node.RequiresBitangent(stageCapability));
+            NeededCoordinateSpace requiresTangent = nodes.OfType<IMayRequireTangent>().Aggregate(NeededCoordinateSpace.None, (mask, node) => mask | node.RequiresTangent(stageCapability));
+            NeededCoordinateSpace requiresViewDir = nodes.OfType<IMayRequireViewDirection>().Aggregate(NeededCoordinateSpace.None, (mask, node) => mask | node.RequiresViewDirection(stageCapability));
+            NeededCoordinateSpace requiresPosition = nodes.OfType<IMayRequirePosition>().Aggregate(NeededCoordinateSpace.None, (mask, node) => mask | node.RequiresPosition(stageCapability));
             bool requiresScreenPosition = nodes.OfType<IMayRequireScreenPosition>().Any(x => x.RequiresScreenPosition());
             bool requiresVertexColor = nodes.OfType<IMayRequireVertexColor>().Any(x => x.RequiresVertexColor());
+            bool requiresFaceSign = nodes.OfType<IMayRequireFaceSign>().Any(x => x.RequiresFaceSign());
 
             var meshUV = new List<UVChannel>();
             for (int uvIndex = 0; uvIndex < ShaderGeneratorNames.UVCount; ++uvIndex)
@@ -74,16 +78,19 @@ namespace UnityEditor.ShaderGraph
 
             // if anything needs tangentspace we have make
             // sure to have our othonormal basis!
-            var compoundSpaces = requiresBitangent | requiresNormal | requiresPosition
-                | requiresTangent | requiresViewDir | requiresPosition
-                | requiresNormal;
-
-            var needsTangentSpace = (compoundSpaces & NeededCoordinateSpace.Tangent) > 0;
-            if (needsTangentSpace)
+            if (includeIntermediateSpaces)
             {
-                requiresBitangent |= NeededCoordinateSpace.Object;
-                requiresNormal |= NeededCoordinateSpace.Object;
-                requiresTangent |= NeededCoordinateSpace.Object;
+                var compoundSpaces = requiresBitangent | requiresNormal | requiresPosition
+                    | requiresTangent | requiresViewDir | requiresPosition
+                    | requiresNormal;
+
+                var needsTangentSpace = (compoundSpaces & NeededCoordinateSpace.Tangent) > 0;
+                if (needsTangentSpace)
+                {
+                    requiresBitangent |= NeededCoordinateSpace.World;
+                    requiresNormal |= NeededCoordinateSpace.World;
+                    requiresTangent |= NeededCoordinateSpace.World;
+                }
             }
 
             var reqs = new ShaderGraphRequirements()
@@ -95,6 +102,7 @@ namespace UnityEditor.ShaderGraph
                 requiresPosition = requiresPosition,
                 requiresScreenPosition = requiresScreenPosition,
                 requiresVertexColor = requiresVertexColor,
+                requiresFaceSign = requiresFaceSign,
                 requiresMeshUVs = meshUV
             };
 

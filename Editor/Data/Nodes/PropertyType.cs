@@ -3,8 +3,11 @@ namespace UnityEditor.ShaderGraph
     public enum PropertyType
     {
         Color,
-        Texture,
+        Texture2D,
+        Texture2DArray,
+        Texture3D,
         Cubemap,
+        Gradient,
         Boolean,
         Vector1,
         Vector2,

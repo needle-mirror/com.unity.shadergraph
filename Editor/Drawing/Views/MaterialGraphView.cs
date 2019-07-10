@@ -7,10 +7,13 @@ using UnityEngine;
 using UnityEditor.Graphing;
 using UnityEngine.Experimental.UIElements;
 using Edge = UnityEditor.Experimental.UIElements.GraphView.Edge;
+using Node = UnityEditor.Experimental.UIElements.GraphView.Node;
+using Object = UnityEngine.Object;
+using UnityEditor.Graphs;
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
-    public sealed class MaterialGraphView : GraphView, IDropTarget
+    public sealed class MaterialGraphView : GraphView
     {
         public MaterialGraphView()
         {
@@ -19,6 +22,13 @@ namespace UnityEditor.ShaderGraph.Drawing
             canPasteSerializedData = CanPasteSerializedDataImplementation;
             unserializeAndPaste = UnserializeAndPasteImplementation;
             deleteSelection = DeleteSelectionImplementation;
+            RegisterCallback<DragUpdatedEvent>(OnDragUpdatedEvent);
+            RegisterCallback<DragPerformEvent>(OnDragPerformEvent);
+        }
+
+        protected override bool canCopySelection
+        {
+            get { return selection.OfType<Node>().Any() || selection.OfType<GroupNode>().Any() || selection.OfType<BlackboardField>().Any(); }
         }
 
         public MaterialGraphView(AbstractMaterialGraph graph) : this()
@@ -36,9 +46,9 @@ namespace UnityEditor.ShaderGraph.Drawing
             if (startSlot == null)
                 return compatibleAnchors;
 
-            var startStage = startSlot.shaderStage;
-            if (startStage == ShaderStage.Dynamic)
-                startStage = NodeUtils.FindEffectiveShaderStage(startSlot.owner, startSlot.isOutputSlot);
+            var startStage = startSlot.stageCapability;
+            if (startStage == ShaderStageCapability.All)
+                startStage = NodeUtils.GetEffectiveShaderStageCapability(startSlot, true) & NodeUtils.GetEffectiveShaderStageCapability(startSlot, false);
 
             foreach (var candidateAnchor in ports.ToList())
             {
@@ -46,12 +56,13 @@ namespace UnityEditor.ShaderGraph.Drawing
                 if (!startSlot.IsCompatibleWith(candidateSlot))
                     continue;
 
-                if (startStage != ShaderStage.Dynamic)
+                if (startStage != ShaderStageCapability.All)
                 {
-                    var candidateStage = candidateSlot.shaderStage;
-                    if (candidateStage == ShaderStage.Dynamic)
-                        candidateStage = NodeUtils.FindEffectiveShaderStage(candidateSlot.owner, !startSlot.isOutputSlot);
-                    if (candidateStage != ShaderStage.Dynamic && candidateStage != startStage)
+                    var candidateStage = candidateSlot.stageCapability;
+                    if (candidateStage == ShaderStageCapability.All)
+                        candidateStage = NodeUtils.GetEffectiveShaderStageCapability(candidateSlot, true)
+                            & NodeUtils.GetEffectiveShaderStageCapability(candidateSlot, false);
+                    if (candidateStage != ShaderStageCapability.All && candidateStage != startStage)
                         continue;
                 }
 
@@ -201,38 +212,17 @@ namespace UnityEditor.ShaderGraph.Drawing
             onConvertToSubgraphClick();
         }
 
-        public delegate void OnSelectionChanged(IEnumerable<INode> nodes);
-
-        public OnSelectionChanged onSelectionChanged;
-
-        void SelectionChanged()
-        {
-            var selectedNodes = selection.OfType<MaterialNodeView>().Where(x => x.userData is INode);
-            if (onSelectionChanged != null)
-                onSelectionChanged(selectedNodes.Select(x => x.userData as INode));
-        }
-
-        public override void AddToSelection(ISelectable selectable)
-        {
-            base.AddToSelection(selectable);
-            SelectionChanged();
-        }
-
-        public override void RemoveFromSelection(ISelectable selectable)
-        {
-            base.RemoveFromSelection(selectable);
-            SelectionChanged();
-        }
-
-        public override void ClearSelection()
-        {
-            base.ClearSelection();
-            SelectionChanged();
-        }
-
         string SerializeGraphElementsImplementation(IEnumerable<GraphElement> elements)
         {
-            var graph = new CopyPasteGraph(elements.OfType<MaterialNodeView>().Select(x => (INode)x.node), elements.OfType<Edge>().Select(x => x.userData).OfType<IEdge>());
+            var nodes = elements.OfType<MaterialNodeView>().Select(x => (INode)x.node);
+            var edges = elements.OfType<Edge>().Select(x => x.userData).OfType<IEdge>();
+            var properties = selection.OfType<BlackboardField>().Select(x => x.userData as IShaderProperty);
+
+            // Collect the property nodes and get the corresponding properties
+            var propertyNodeGuids = nodes.OfType<PropertyNode>().Select(x => x.propertyGuid);
+            var metaProperties = this.graph.properties.Where(x => propertyNodeGuids.Contains(x.guid));
+
+            var graph = new CopyPasteGraph(this.graph.guid, nodes, edges, properties, metaProperties);
             return JsonUtility.ToJson(graph, true);
         }
 
@@ -277,68 +267,186 @@ namespace UnityEditor.ShaderGraph.Drawing
             selection.Clear();
         }
 
-        public bool CanAcceptDrop(List<ISelectable> selection)
+        #region Drag and drop
+
+        static bool ValidateObjectForDrop(Object obj)
         {
-            return selection.OfType<BlackboardField>().Any();
+            return EditorUtility.IsPersistent(obj) && (obj is Texture2D || obj is Cubemap || obj is MaterialSubGraphAsset || obj is Texture2DArray || obj is Texture3D);
         }
 
-#if UNITY_2018_1
-        public EventPropagation DragUpdated(IMGUIEvent evt, IEnumerable<ISelectable> selection, IDropTarget dropTarget)
+        static void OnDragUpdatedEvent(DragUpdatedEvent e)
         {
-            return EventPropagation.Continue;
+            var selection = DragAndDrop.GetGenericData("DragSelection") as List<ISelectable>;
+            bool dragging = false;
+            if (selection != null)
+            {
+                // Blackboard
+                if (selection.OfType<BlackboardField>().Any())
+                    dragging = true;
+            }
+            else
+            {
+                // Handle unity objects
+                var objects = DragAndDrop.objectReferences;
+                foreach (Object obj in objects)
+                {
+                    if (ValidateObjectForDrop(obj))
+                    {
+                        dragging = true;
+                        break;
+                    }
+                }
+            }
+
+            if (dragging)
+            {
+                DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
+            }
         }
 
-        public EventPropagation DragPerform(IMGUIEvent evt, IEnumerable<ISelectable> selection, IDropTarget dropTarget)
+        void OnDragPerformEvent(DragPerformEvent e)
         {
-            return EventPropagation.Continue;
+            Vector2 localPos = (e.currentTarget as VisualElement).ChangeCoordinatesTo(contentViewContainer, e.localMousePosition);
+
+            var selection = DragAndDrop.GetGenericData("DragSelection") as List<ISelectable>;
+            if (selection != null)
+            {
+                // Blackboard
+                if (selection.OfType<BlackboardField>().Any())
+                {
+                    IEnumerable<BlackboardField> fields = selection.OfType<BlackboardField>();
+                    foreach (BlackboardField field in fields)
+                    {
+                        CreateNode(field, localPos);
+                    }
+                }
+            }
+            else
+            {
+                // Handle unity objects
+                var objects = DragAndDrop.objectReferences;
+                foreach (Object obj in objects)
+                {
+                    if (ValidateObjectForDrop(obj))
+                    {
+                        CreateNode(obj, localPos);
+                    }
+                }
+            }
         }
 
-        public EventPropagation DragExited()
+        void CreateNode(object obj, Vector2 nodePosition)
         {
-            return EventPropagation.Continue;
-        }
-#elif UNITY_2018_3_OR_NEWER
-        public bool DragUpdated(DragUpdatedEvent evt, IEnumerable<ISelectable> selection, IDropTarget dropTarget, ISelection dragSource)
-        {
-            return true;
+            var texture2D = obj as Texture2D;
+            if (texture2D != null)
+            {
+                graph.owner.RegisterCompleteObjectUndo("Drag Texture");
+
+                bool isNormalMap = false;
+                if (EditorUtility.IsPersistent(texture2D) && !string.IsNullOrEmpty(AssetDatabase.GetAssetPath(texture2D)))
+                {
+                    var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(texture2D)) as TextureImporter;
+                    if (importer != null)
+                        isNormalMap = importer.textureType == TextureImporterType.NormalMap;
+                }
+
+                var node = new SampleTexture2DNode();
+                if (isNormalMap)
+                    node.textureType = TextureType.Normal;
+
+                var drawState = node.drawState;
+                drawState.position = new Rect(nodePosition, drawState.position.size);
+                node.drawState = drawState;
+                graph.AddNode(node);
+
+                var inputslot = node.FindInputSlot<Texture2DInputMaterialSlot>(SampleTexture2DNode.TextureInputId);
+                if (inputslot != null)
+                    inputslot.texture = texture2D;
+            }
+
+            var textureArray = obj as Texture2DArray;
+            if (textureArray != null)
+            {
+                graph.owner.RegisterCompleteObjectUndo("Drag Texture Array");
+                var property = new Texture2DArrayShaderProperty { displayName = textureArray.name, value = { textureArray = textureArray } };
+                graph.AddShaderProperty(property);
+                var node = new SampleTexture2DArrayNode();
+                var drawState = node.drawState;
+                drawState.position = new Rect(nodePosition, drawState.position.size);
+                node.drawState = drawState;
+                graph.AddNode(node);
+                var inputslot = node.FindSlot<Texture2DArrayInputMaterialSlot>(SampleTexture2DArrayNode.TextureInputId);
+                if (inputslot != null)
+                    inputslot.textureArray = textureArray;
+            }
+
+            var texture3D = obj as Texture3D;
+            if (texture3D != null)
+            {
+                graph.owner.RegisterCompleteObjectUndo("Drag Texture 3D");
+                var property = new Texture3DShaderProperty { displayName = texture3D.name, value = { texture = texture3D } };
+                graph.AddShaderProperty(property);
+                var node = new SampleTexture3DNode();
+                var drawState = node.drawState;
+                drawState.position = new Rect(nodePosition, drawState.position.size);
+                node.drawState = drawState;
+                graph.AddNode(node);
+                var inputslot = node.FindSlot<Texture3DInputMaterialSlot>(SampleTexture3DNode.TextureInputId);
+                if (inputslot != null)
+                    inputslot.texture = texture3D;
+            }
+
+            var cubemap = obj as Cubemap;
+            if (cubemap != null)
+            {
+                graph.owner.RegisterCompleteObjectUndo("Drag Cubemap");
+                var property = new CubemapShaderProperty { displayName = cubemap.name, value = { cubemap = cubemap } };
+                graph.AddShaderProperty(property);
+                var node = new SampleCubemapNode();
+
+                var drawState = node.drawState;
+                drawState.position = new Rect(nodePosition, drawState.position.size);
+                node.drawState = drawState;
+                graph.AddNode(node);
+
+                var inputslot = node.FindInputSlot<CubemapInputMaterialSlot>(SampleCubemapNode.CubemapInputId);
+                if (inputslot != null)
+                    inputslot.cubemap = cubemap;
+            }
+
+            var subGraphAsset = obj as MaterialSubGraphAsset;
+            if (subGraphAsset != null)
+            {
+                graph.owner.RegisterCompleteObjectUndo("Drag Sub-Graph");
+                var node = new SubGraphNode();
+
+                var drawState = node.drawState;
+                drawState.position = new Rect(nodePosition, drawState.position.size);
+                node.drawState = drawState;
+                node.subGraphAsset = subGraphAsset;
+                graph.AddNode(node);
+            }
+
+            var blackboardField = obj as BlackboardField;
+            if (blackboardField != null)
+            {
+                IShaderProperty property = blackboardField.userData as IShaderProperty;
+                if (property != null)
+                {
+                    graph.owner.RegisterCompleteObjectUndo("Drag Property");
+                    var node = new PropertyNode();
+
+                    var drawState = node.drawState;
+                    drawState.position =  new Rect(nodePosition, drawState.position.size);
+                    node.drawState = drawState;
+                    graph.AddNode(node);
+
+                    node.propertyGuid = property.guid;
+                }
+            }
         }
 
-        public bool DragPerform(DragPerformEvent evt, IEnumerable<ISelectable> selection, IDropTarget dropTarget, ISelection dragSource)
-        {
-            return true;
-        }
-
-        public bool DragEnter(DragEnterEvent evt, IEnumerable<ISelectable> selection, IDropTarget enteredTarget, ISelection dragSource)
-        {
-            return true;
-        }
-
-        public bool DragLeave(DragLeaveEvent evt, IEnumerable<ISelectable> selection, IDropTarget leftTarget, ISelection dragSource)
-        {
-            return true;
-        }
-
-        public bool DragExited()
-        {
-            return true;
-        }
-#else
-        public bool DragUpdated(DragUpdatedEvent evt, IEnumerable<ISelectable> selection, IDropTarget dropTarget)
-        {
-            return true;
-        }
-
-        public bool DragPerform(DragPerformEvent evt, IEnumerable<ISelectable> selection, IDropTarget dropTarget)
-        {
-            return true;
-        }
-
-        bool IDropTarget.DragExited()
-        {
-            return true;
-        }
-#endif
-
+        #endregion
     }
 
     public static class GraphViewExtensions
@@ -348,12 +456,57 @@ namespace UnityEditor.ShaderGraph.Drawing
             if (copyGraph == null)
                 return;
 
+            // Make new properties from the copied graph
+            foreach (IShaderProperty property in copyGraph.properties)
+            {
+                string propertyName = graphView.graph.SanitizePropertyName(property.displayName);
+                IShaderProperty copiedProperty = property.Copy();
+                copiedProperty.displayName = propertyName;
+                graphView.graph.AddShaderProperty(copiedProperty);
+
+                // Update the property nodes that depends on the copied node
+                var dependentPropertyNodes = copyGraph.GetNodes<PropertyNode>().Where(x => x.propertyGuid == property.guid);
+                foreach (var node in dependentPropertyNodes)
+                {
+                    node.owner = graphView.graph;
+                    node.propertyGuid = copiedProperty.guid;
+                }
+            }
+
             using (var remappedNodesDisposable = ListPool<INode>.GetDisposable())
+            {
                 using (var remappedEdgesDisposable = ListPool<IEdge>.GetDisposable())
                 {
                     var remappedNodes = remappedNodesDisposable.value;
                     var remappedEdges = remappedEdgesDisposable.value;
                     graphView.graph.PasteGraph(copyGraph, remappedNodes, remappedEdges);
+
+                    if (graphView.graph.guid != copyGraph.sourceGraphGuid)
+                    {
+                        // Compute the mean of the copied nodes.
+                        Vector2 centroid = Vector2.zero;
+                        var count = 1;
+                        foreach (var node in remappedNodes)
+                        {
+                            var position = node.drawState.position.position;
+                            centroid = centroid + (position - centroid) / count;
+                            ++count;
+                        }
+
+                        // Get the center of the current view
+                        var viewCenter = graphView.contentViewContainer.WorldToLocal(graphView.layout.center);
+
+                        foreach (var node in remappedNodes)
+                        {
+                            var drawState = node.drawState;
+                            var positionRect = drawState.position;
+                            var position = positionRect.position;
+                            position += viewCenter - centroid;
+                            positionRect.position = position;
+                            drawState.position = positionRect;
+                            node.drawState = drawState;
+                        }
+                    }
 
                     // Add new elements to selection
                     graphView.ClearSelection();
@@ -368,6 +521,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                                 graphView.AddToSelection(nodeView);
                         });
                 }
+            }
         }
     }
 }

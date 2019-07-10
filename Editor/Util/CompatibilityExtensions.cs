@@ -1,22 +1,11 @@
-﻿using System;
+using System;
 using UnityEngine;
 using UnityEngine.Experimental.UIElements;
-
-#if UNITY_2018_1
-using UnityEditor.Experimental.UIElements.GraphView;
-#endif
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
     static class CompatibilityExtensions
     {
-#if UNITY_2018_1
-        public static void OpenTextEditor(this BlackboardField field)
-        {
-            field.RenameGo();
-        }
-#endif
-
         public static void AppendAction(this ContextualMenu contextualMenu, string actionName, Action action, Func<ContextualMenu.MenuAction.StatusFlags> actionStatusCallback)
         {
             Debug.Assert(action != null);
@@ -28,24 +17,6 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             Debug.Assert(action != null);
             contextualMenu.AppendAction(actionName, e => action(), e => statusFlags);
-        }
-
-        public static bool GetValue(this Toggle toggle)
-        {
-#if UNITY_2018_1
-            return toggle.on;
-#else
-            return toggle.value;
-#endif
-        }
-
-        public static void SetValue(this Toggle toggle, bool value)
-        {
-#if UNITY_2018_1
-            toggle.on = value;
-#else
-            toggle.value = value;
-#endif
         }
 
 #if !UNITY_2018_3_OR_NEWER

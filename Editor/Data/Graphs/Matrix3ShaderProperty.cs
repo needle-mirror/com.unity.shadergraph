@@ -24,12 +24,20 @@ namespace UnityEditor.ShaderGraph
 
         public override INode ToConcreteNode()
         {
-            return new Matrix3Node 
-            { 
-                row0 = new Vector3(value.m00, value.m01, value.m02), 
+            return new Matrix3Node
+            {
+                row0 = new Vector3(value.m00, value.m01, value.m02),
                 row1 = new Vector3(value.m10, value.m11, value.m12),
                 row2 = new Vector3(value.m20, value.m21, value.m22)
             };
+        }
+
+        public override IShaderProperty Copy()
+        {
+            var copied = new Matrix3ShaderProperty();
+            copied.displayName = displayName;
+            copied.value = value;
+            return copied;
         }
     }
 }

@@ -47,7 +47,6 @@ namespace UnityEditor.ShaderGraph.Drawing.Controls
         {
             m_Node.owner.owner.RegisterCompleteObjectUndo("Cubemap Change");
             m_PropertyInfo.SetValue(m_Node, evt.newValue, null);
-
             this.MarkDirtyRepaint();
         }
     }

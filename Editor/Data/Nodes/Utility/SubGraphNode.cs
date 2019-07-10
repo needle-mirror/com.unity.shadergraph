@@ -25,6 +25,9 @@ namespace UnityEditor.ShaderGraph
         [SerializeField]
         private string m_SerializedSubGraph = string.Empty;
 
+        [NonSerialized]
+        MaterialSubGraphAsset m_SubGraph;
+
         [Serializable]
         private class SubGraphHelper
         {
@@ -42,8 +45,6 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
-#if UNITY_EDITOR
-        [ObjectControl("")]
         public MaterialSubGraphAsset subGraphAsset
         {
             get
@@ -51,9 +52,14 @@ namespace UnityEditor.ShaderGraph
                 if (string.IsNullOrEmpty(m_SerializedSubGraph))
                     return null;
 
-                var helper = new SubGraphHelper();
-                EditorJsonUtility.FromJsonOverwrite(m_SerializedSubGraph, helper);
-                return helper.subGraph;
+                if (m_SubGraph == null)
+                {
+                    var helper = new SubGraphHelper();
+                    EditorJsonUtility.FromJsonOverwrite(m_SerializedSubGraph, helper);
+                    m_SubGraph = helper.subGraph;
+                }
+
+                return m_SubGraph;
             }
             set
             {
@@ -63,14 +69,12 @@ namespace UnityEditor.ShaderGraph
                 var helper = new SubGraphHelper();
                 helper.subGraph = value;
                 m_SerializedSubGraph = EditorJsonUtility.ToJson(helper, true);
+                m_SubGraph = null;
                 UpdateSlots();
 
                 Dirty(ModificationScope.Topological);
             }
         }
-#else
-        public MaterialSubGraphAsset subGraphAsset {get; set; }
-#endif
 
         public INode outputNode
         {
@@ -128,6 +132,10 @@ namespace UnityEditor.ShaderGraph
 
                 if (prop is TextureShaderProperty)
                     arguments.Add(string.Format("TEXTURE2D_PARAM({0}, sampler{0})", GetSlotValue(inSlotId, generationMode)));
+                if (prop is Texture2DArrayShaderProperty)
+                    arguments.Add(string.Format("TEXTURE2D_PARAM({0}, sampler{0})", GetSlotValue(inSlotId, generationMode)));
+                if (prop is Texture3DShaderProperty)
+                    arguments.Add(string.Format("TEXTURE3D_PARAM({0}, sampler{0})", GetSlotValue(inSlotId, generationMode)));
                 else if (prop is CubemapShaderProperty)
                     arguments.Add(string.Format("TEXTURECUBE_PARAM({0}, sampler{0})", GetSlotValue(inSlotId, generationMode)));
                 else
@@ -157,7 +165,7 @@ namespace UnityEditor.ShaderGraph
             var validNames = new List<int>();
             if (referencedGraph == null)
             {
-                RemoveSlotsNameNotMatching(validNames);
+                RemoveSlotsNameNotMatching(validNames, true);
                 return;
             }
 
@@ -172,11 +180,20 @@ namespace UnityEditor.ShaderGraph
                     case PropertyType.Color:
                         slotType = SlotValueType.Vector4;
                         break;
-                    case PropertyType.Texture:
+                    case PropertyType.Texture2D:
                         slotType = SlotValueType.Texture2D;
+                        break;
+                    case PropertyType.Texture2DArray:
+                        slotType = SlotValueType.Texture2DArray;
+                        break;
+                    case PropertyType.Texture3D:
+                        slotType = SlotValueType.Texture3D;
                         break;
                     case PropertyType.Cubemap:
                         slotType = SlotValueType.Cubemap;
+                        break;
+                    case PropertyType.Gradient:
+                        slotType = SlotValueType.Gradient;
                         break;
                     case PropertyType.Vector1:
                         slotType = SlotValueType.Vector1;
@@ -204,12 +221,28 @@ namespace UnityEditor.ShaderGraph
                 }
 
                 var id = prop.guid.GetHashCode();
-                MaterialSlot slot = MaterialSlot.CreateMaterialSlot(slotType, id, prop.displayName, prop.referenceName, SlotType.Input, prop.defaultValue);
+                MaterialSlot slot = MaterialSlot.CreateMaterialSlot(slotType, id, prop.displayName, prop.referenceName, SlotType.Input, prop.defaultValue, ShaderStageCapability.Fragment);
                 // copy default for texture for niceness
-                if (slotType == SlotValueType.Texture2D && propType == PropertyType.Texture)
+                if (slotType == SlotValueType.Texture2D && propType == PropertyType.Texture2D)
                 {
                     var tSlot = slot as Texture2DInputMaterialSlot;
                     var tProp = prop as TextureShaderProperty;
+                    if (tSlot != null && tProp != null)
+                        tSlot.texture = tProp.value.texture;
+                }
+                // copy default for texture array for niceness
+                else if (slotType == SlotValueType.Texture2DArray && propType == PropertyType.Texture2DArray)
+                {
+                    var tSlot = slot as Texture2DArrayInputMaterialSlot;
+                    var tProp = prop as Texture2DArrayShaderProperty;
+                    if (tSlot != null && tProp != null)
+                        tSlot.textureArray = tProp.value.textureArray;
+                }
+                // copy default for texture 3d for niceness
+                else if (slotType == SlotValueType.Texture3D && propType == PropertyType.Texture3D)
+                {
+                    var tSlot = slot as Texture3DInputMaterialSlot;
+                    var tProp = prop as Texture3DShaderProperty;
                     if (tSlot != null && tProp != null)
                         tSlot.texture = tProp.value.texture;
                 }
@@ -230,7 +263,7 @@ namespace UnityEditor.ShaderGraph
             {
                 foreach (var slot in NodeExtensions.GetInputSlots<MaterialSlot>(subGraphOutputNode))
                 {
-                    AddSlot(MaterialSlot.CreateMaterialSlot(slot.valueType, slot.id, slot.RawDisplayName(), slot.shaderOutputName, SlotType.Output, Vector4.zero));
+                    AddSlot(MaterialSlot.CreateMaterialSlot(slot.valueType, slot.id, slot.RawDisplayName(), slot.shaderOutputName, SlotType.Output, Vector4.zero, ShaderStageCapability.Fragment));
                     validNames.Add(slot.id);
                 }
             }
@@ -278,77 +311,77 @@ namespace UnityEditor.ShaderGraph
             return string.Format("sg_{0}_{1}", functionName, GuidEncoder.Encode(referencedGraph.guid));
         }
 
-        public virtual void GenerateNodeFunction(FunctionRegistry registry, GenerationMode generationMode)
+        public virtual void GenerateNodeFunction(FunctionRegistry registry, GraphContext graphContext, GenerationMode generationMode)
         {
             if (subGraphAsset == null || referencedGraph == null)
                 return;
 
-            referencedGraph.GenerateNodeFunction(registry, GenerationMode.ForReals);
-            referencedGraph.GenerateSubGraphFunction(SubGraphFunctionName(), registry, ShaderGraphRequirements.FromNodes(new List<INode> {this}), GenerationMode.ForReals);
+            referencedGraph.GenerateNodeFunction(registry, graphContext, GenerationMode.ForReals);
+            referencedGraph.GenerateSubGraphFunction(SubGraphFunctionName(), registry, graphContext, ShaderGraphRequirements.FromNodes(new List<INode> {this}), GenerationMode.ForReals);
         }
 
-        public NeededCoordinateSpace RequiresNormal()
+        public NeededCoordinateSpace RequiresNormal(ShaderStageCapability stageCapability)
         {
             if (referencedGraph == null)
                 return NeededCoordinateSpace.None;
 
             return referencedGraph.activeNodes.OfType<IMayRequireNormal>().Aggregate(NeededCoordinateSpace.None, (mask, node) =>
-            {
-                mask |= node.RequiresNormal();
-                return mask;
-            });
+                {
+                    mask |= node.RequiresNormal(stageCapability);
+                    return mask;
+                });
         }
 
-        public bool RequiresMeshUV(UVChannel channel)
+        public bool RequiresMeshUV(UVChannel channel, ShaderStageCapability stageCapability)
         {
             if (referencedGraph == null)
                 return false;
 
-            return referencedGraph.activeNodes.OfType<IMayRequireMeshUV>().Any(x => x.RequiresMeshUV(channel));
+            return referencedGraph.activeNodes.OfType<IMayRequireMeshUV>().Any(x => x.RequiresMeshUV(channel, stageCapability));
         }
 
-        public bool RequiresScreenPosition()
+        public bool RequiresScreenPosition(ShaderStageCapability stageCapability)
         {
             if (referencedGraph == null)
                 return false;
 
-            return referencedGraph.activeNodes.OfType<IMayRequireScreenPosition>().Any(x => x.RequiresScreenPosition());
+            return referencedGraph.activeNodes.OfType<IMayRequireScreenPosition>().Any(x => x.RequiresScreenPosition(stageCapability));
         }
 
-        public NeededCoordinateSpace RequiresViewDirection()
+        public NeededCoordinateSpace RequiresViewDirection(ShaderStageCapability stageCapability)
         {
             if (referencedGraph == null)
                 return NeededCoordinateSpace.None;
 
             return referencedGraph.activeNodes.OfType<IMayRequireViewDirection>().Aggregate(NeededCoordinateSpace.None, (mask, node) =>
-            {
-                mask |= node.RequiresViewDirection();
-                return mask;
-            });
+                {
+                    mask |= node.RequiresViewDirection(stageCapability);
+                    return mask;
+                });
         }
 
-        public NeededCoordinateSpace RequiresPosition()
+        public NeededCoordinateSpace RequiresPosition(ShaderStageCapability stageCapability)
         {
             if (referencedGraph == null)
                 return NeededCoordinateSpace.None;
 
             return referencedGraph.activeNodes.OfType<IMayRequirePosition>().Aggregate(NeededCoordinateSpace.None, (mask, node) =>
-            {
-                mask |= node.RequiresPosition();
-                return mask;
-            });
+                {
+                    mask |= node.RequiresPosition(stageCapability);
+                    return mask;
+                });
         }
 
-        public NeededCoordinateSpace RequiresTangent()
+        public NeededCoordinateSpace RequiresTangent(ShaderStageCapability stageCapability)
         {
             if (referencedGraph == null)
                 return NeededCoordinateSpace.None;
 
             return referencedGraph.activeNodes.OfType<IMayRequireTangent>().Aggregate(NeededCoordinateSpace.None, (mask, node) =>
-            {
-                mask |= node.RequiresTangent();
-                return mask;
-            });
+                {
+                    mask |= node.RequiresTangent(stageCapability);
+                    return mask;
+                });
         }
 
         public bool RequiresTime()
@@ -359,24 +392,36 @@ namespace UnityEditor.ShaderGraph
             return referencedGraph.activeNodes.OfType<IMayRequireTime>().Any(x => x.RequiresTime());
         }
 
-        public NeededCoordinateSpace RequiresBitangent()
+        public NeededCoordinateSpace RequiresBitangent(ShaderStageCapability stageCapability)
         {
             if (referencedGraph == null)
                 return NeededCoordinateSpace.None;
 
             return referencedGraph.activeNodes.OfType<IMayRequireBitangent>().Aggregate(NeededCoordinateSpace.None, (mask, node) =>
-            {
-                mask |= node.RequiresBitangent();
-                return mask;
-            });
+                {
+                    mask |= node.RequiresBitangent(stageCapability);
+                    return mask;
+                });
         }
 
-        public bool RequiresVertexColor()
+        public bool RequiresVertexColor(ShaderStageCapability stageCapability)
         {
             if (referencedGraph == null)
                 return false;
 
-            return referencedGraph.activeNodes.OfType<IMayRequireVertexColor>().Any(x => x.RequiresVertexColor());
+            return referencedGraph.activeNodes.OfType<IMayRequireVertexColor>().Any(x => x.RequiresVertexColor(stageCapability));
+        }
+
+        public override void GetSourceAssetDependencies(List<string> paths)
+        {
+            base.GetSourceAssetDependencies(paths);
+            if (subGraphAsset != null)
+            {
+                var assetPath = AssetDatabase.GetAssetPath(subGraphAsset);
+                paths.Add(assetPath);
+                foreach (var dependencyPath in AssetDatabase.GetDependencies(assetPath))
+                    paths.Add(dependencyPath);
+            }
         }
     }
 }

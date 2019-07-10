@@ -9,12 +9,12 @@ using UnityEditor;
 using UnityEditor.Experimental.AssetImporters;
 using UnityEditor.ShaderGraph.Drawing;
 
-[ScriptedImporter(13, ShaderGraphImporter.ShaderGraphExtension)]
+[ScriptedImporter(15, ShaderGraphExtension)]
 public class ShaderGraphImporter : ScriptedImporter
 {
     public const string ShaderGraphExtension = "shadergraph";
 
-    private string errorShader = @"
+    const string k_ErrorShader = @"
 Shader ""Hidden/GraphErrorShader2""
 {
     SubShader
@@ -64,14 +64,9 @@ Shader ""Hidden/GraphErrorShader2""
             ShaderUtil.ClearShaderErrors(oldShader);
 
         List<PropertyCollector.TextureInfo> configuredTextures;
-        var text = GetShaderText<MaterialGraph>(ctx.assetPath, out configuredTextures);
-        if (text == null)
-            text = errorShader;
-
-        var name = Path.GetFileNameWithoutExtension(ctx.assetPath);
-        string shaderName = string.Format("graphs/{0}", name);
-        text = text.Replace("Hidden/GraphErrorShader2", shaderName);
-
+        string path = ctx.assetPath;
+        var sourceAssetDependencyPaths = new List<string>();
+        var text = GetShaderText(path, out configuredTextures, sourceAssetDependencyPaths);
         var shader = ShaderUtil.CreateShaderAsset(text);
 
         EditorMaterialUtility.SetShaderDefaults(
@@ -85,27 +80,42 @@ Shader ""Hidden/GraphErrorShader2""
 
         ctx.AddObjectToAsset("MainAsset", shader);
         ctx.SetMainObject(shader);
+
+        foreach (var sourceAssetDependencyPath in sourceAssetDependencyPaths.Distinct())
+            ctx.DependsOnSourceAsset(sourceAssetDependencyPath);
     }
 
-    private static string GetShaderText<T>(string path, out List<PropertyCollector.TextureInfo> configuredTextures) where T : IShaderGraph
+    internal static string GetShaderText(string path, out List<PropertyCollector.TextureInfo> configuredTextures, List<string> sourceAssetDependencyPaths)
     {
+        string shaderString = null;
+        var shaderName = Path.GetFileNameWithoutExtension(path);
         try
         {
             var textGraph = File.ReadAllText(path, Encoding.UTF8);
-            var graph = JsonUtility.FromJson<T>(textGraph);
+            var graph = JsonUtility.FromJson<MaterialGraph>(textGraph);
             graph.LoadedFromDisk();
 
-            var name = Path.GetFileNameWithoutExtension(path);
-            var shaderString = graph.GetShader(string.Format("graphs/{0}", name), GenerationMode.ForReals, out configuredTextures);
-            //Debug.Log(shaderString);
-            return shaderString;
+            if (!string.IsNullOrEmpty(graph.path))
+                shaderName = graph.path + "/" + shaderName;
+            shaderString = graph.GetShader(shaderName, GenerationMode.ForReals, out configuredTextures, sourceAssetDependencyPaths);
+
+            if (sourceAssetDependencyPaths != null)
+            {
+                foreach (var node in graph.GetNodes<AbstractMaterialNode>())
+                    node.GetSourceAssetDependencies(sourceAssetDependencyPaths);
+            }
         }
         catch (Exception)
         {
+            configuredTextures = new List<PropertyCollector.TextureInfo>();
             // ignored
         }
-        configuredTextures = new List<PropertyCollector.TextureInfo>();
-        return null;
+        return shaderString ?? k_ErrorShader.Replace("Hidden/GraphErrorShader2", shaderName);
+    }
+
+    internal static string GetShaderText(string path, out List<PropertyCollector.TextureInfo> configuredTextures)
+    {
+        return GetShaderText(path, out configuredTextures, null);
     }
 }
 

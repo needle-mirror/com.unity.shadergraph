@@ -36,14 +36,17 @@ namespace UnityEditor.ShaderGraph
 
         public string GetPropertiesDeclaration(int baseIndentLevel)
         {
-            var sb = new StringBuilder();
+            var builder = new ShaderStringBuilder(baseIndentLevel);
+            GetPropertiesDeclaration(builder);
+            return builder.ToString();
+        }
+
+        public void GetPropertiesDeclaration(ShaderStringBuilder builder)
+        {
             foreach (var prop in m_Properties)
             {
-                for (var i = 0; i < baseIndentLevel; i++)
-                    sb.Append("\t");
-                sb.AppendLine(prop.GetPropertyDeclarationString());
+                builder.AppendLine(prop.GetPropertyDeclarationString());
             }
-            return sb.ToString();
         }
 
         public List<TextureInfo> GetConfiguredTexutres()
@@ -51,6 +54,34 @@ namespace UnityEditor.ShaderGraph
             var result = new List<TextureInfo>();
 
             foreach (var prop in m_Properties.OfType<TextureShaderProperty>())
+            {
+                if (prop.referenceName != null)
+                {
+                    var textureInfo = new TextureInfo
+                    {
+                        name = prop.referenceName,
+                        textureId = prop.value.texture != null ? prop.value.texture.GetInstanceID() : 0,
+                        modifiable = prop.modifiable
+                    };
+                    result.Add(textureInfo);
+                }
+            }
+
+            foreach (var prop in m_Properties.OfType<Texture2DArrayShaderProperty>())
+            {
+                if (prop.referenceName != null)
+                {
+                    var textureInfo = new TextureInfo
+                    {
+                        name = prop.referenceName,
+                        textureId = prop.value.textureArray != null ? prop.value.textureArray.GetInstanceID() : 0,
+                        modifiable = prop.modifiable
+                    };
+                    result.Add(textureInfo);
+                }
+            }
+
+            foreach (var prop in m_Properties.OfType<Texture3DShaderProperty>())
             {
                 if (prop.referenceName != null)
                 {

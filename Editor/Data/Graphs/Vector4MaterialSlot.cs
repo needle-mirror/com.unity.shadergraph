@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor.Graphing;
 using UnityEditor.ShaderGraph.Drawing.Slots;
 using UnityEngine;
@@ -28,13 +29,13 @@ namespace UnityEditor.ShaderGraph
             string shaderOutputName,
             SlotType slotType,
             Vector4 value,
-            ShaderStage shaderStage = ShaderStage.Dynamic,
+            ShaderStageCapability stageCapability = ShaderStageCapability.All,
             string label1 = "X",
             string label2 = "Y",
             string label3 = "Z",
             string label4 = "W",
             bool hidden = false)
-            : base(slotId, displayName, shaderOutputName, slotType, shaderStage, hidden)
+            : base(slotId, displayName, shaderOutputName, slotType, stageCapability, hidden)
         {
             m_Value = value;
             m_Labels = new[] { label1, label2, label3, label4 };
@@ -76,14 +77,14 @@ namespace UnityEditor.ShaderGraph
             properties.AddShaderProperty(property);
         }
 
-        public override PreviewProperty GetPreviewProperty(string name)
+        public override void GetPreviewProperties(List<PreviewProperty> properties, string name)
         {
             var pp = new PreviewProperty(PropertyType.Vector4)
             {
                 name = name,
                 vector4Value = new Vector4(value.x, value.y, value.z, value.w),
             };
-            return pp;
+            properties.Add(pp);
         }
 
         public override SlotValueType valueType { get { return SlotValueType.Vector4; } }

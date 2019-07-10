@@ -53,18 +53,18 @@ namespace UnityEditor.ShaderGraph
         {
             var id = GetSlotValue(CubemapInputId, generationMode);
             string result = string.Format("{0}4 {1} = SAMPLE_TEXTURECUBE_LOD({2}, {3}, reflect(-{4}, {5}), {6});"
-                , precision
-                , GetVariableNameForSlot(OutputSlotId)
-                , id
-                , "sampler" + id
-                , GetSlotValue(ViewDirInputId, generationMode)
-                , GetSlotValue(NormalInputId, generationMode)
-                , GetSlotValue(LODInputId, generationMode));
+                    , precision
+                    , GetVariableNameForSlot(OutputSlotId)
+                    , id
+                    , "sampler" + id
+                    , GetSlotValue(ViewDirInputId, generationMode)
+                    , GetSlotValue(NormalInputId, generationMode)
+                    , GetSlotValue(LODInputId, generationMode));
 
             visitor.AddShaderChunk(result, true);
         }
 
-        public NeededCoordinateSpace RequiresViewDirection()
+        public NeededCoordinateSpace RequiresViewDirection(ShaderStageCapability stageCapability)
         {
             var viewDirSlot = FindInputSlot<MaterialSlot>(ViewDirInputId);
             var edgesViewDir = owner.GetEdges(viewDirSlot.slotReference);
@@ -74,7 +74,7 @@ namespace UnityEditor.ShaderGraph
                 return NeededCoordinateSpace.None;
         }
 
-        public NeededCoordinateSpace RequiresNormal()
+        public NeededCoordinateSpace RequiresNormal(ShaderStageCapability stageCapability)
         {
             var normalSlot = FindInputSlot<MaterialSlot>(NormalInputId);
             var edgesNormal = owner.GetEdges(normalSlot.slotReference);

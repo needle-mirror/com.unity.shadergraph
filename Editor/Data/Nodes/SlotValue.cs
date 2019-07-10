@@ -12,7 +12,10 @@ namespace UnityEditor.ShaderGraph
         Matrix3,
         Matrix2,
         Texture2D,
+        Texture2DArray,
+        Texture3D,
         Cubemap,
+        Gradient,
         DynamicVector,
         Vector4,
         Vector3,
@@ -29,7 +32,10 @@ namespace UnityEditor.ShaderGraph
         Matrix3,
         Matrix2,
         Texture2D,
+        Texture2DArray,
+        Texture3D,
         Cubemap,
+        Gradient,
         Vector4,
         Vector3,
         Vector2,
@@ -73,7 +79,7 @@ namespace UnityEditor.ShaderGraph
 
         public static ConcreteSlotValueType ConvertMatrixToVectorType(ConcreteSlotValueType matrixType)
         {
-            switch(matrixType)
+            switch (matrixType)
             {
                 case ConcreteSlotValueType.Matrix4:
                     return ConcreteSlotValueType.Vector4;
@@ -91,7 +97,10 @@ namespace UnityEditor.ShaderGraph
             "typeMatrix",
             "typeMatrix",
             "typeTexture2D",
+            "typeTexture2DArray",
+            "typeTexture3D",
             "typeCubemap",
+            "typeGradient",
             "typeFloat4",
             "typeFloat3",
             "typeFloat2",

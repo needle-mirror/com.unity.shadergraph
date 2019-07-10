@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -7,13 +8,11 @@ using UnityEditor.Experimental.UIElements;
 using UnityEditor.Graphing.Util;
 using UnityEngine;
 using UnityEditor.Graphing;
+using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 using Edge = UnityEditor.Experimental.UIElements.GraphView.Edge;
-#if UNITY_2018_1
-using GeometryChangedEvent = UnityEngine.Experimental.UIElements.PostLayoutEvent;
-#else
-using GeometryChangedEvent = UnityEngine.Experimental.UIElements.GeometryChangedEvent;
-#endif
+using UnityEditor.Experimental.UIElements.GraphView;
+using UnityEngine.Experimental.UIElements;
 
 namespace UnityEditor.ShaderGraph.Drawing
 {
@@ -149,33 +148,6 @@ namespace UnityEditor.ShaderGraph.Drawing
             graphEditorView = null;
         }
 
-        void UpdateDependantGraphs()
-        {
-            string[] lookFor = new string[] {"Assets"};
-            var guids = AssetDatabase.FindAssets("t:shader", lookFor);
-            foreach (string guid in guids)
-            {
-                if (AssetDatabase.GUIDToAssetPath(guid).ToLower().EndsWith(ShaderGraphImporter.ShaderGraphExtension))
-                {
-                    var path = AssetDatabase.GUIDToAssetPath(guid);
-
-                    var textGraph = File.ReadAllText(path, Encoding.UTF8);
-                    var graph = JsonUtility.FromJson<MaterialGraph>(textGraph);
-                    graph.LoadedFromDisk();
-
-                    foreach (SubGraphNode graphNode in graph.GetNodes<SubGraphNode>())
-                    {
-                        var subpath = AssetDatabase.GetAssetPath(graphNode.subGraphAsset);
-                        var subguid = AssetDatabase.AssetPathToGUID(subpath);
-                        if (subguid == selectedGuid)
-                        {
-                            UpdateShaderGraphOnDisk(path, graph);
-                        }
-                    }
-                }
-            }
-        }
-
         public void PingAsset()
         {
             if (selectedGuid != null)
@@ -233,9 +205,16 @@ namespace UnityEditor.ShaderGraph.Drawing
             var middle = bounds.center;
             bounds.center = Vector2.zero;
 
+            // Collect the property nodes and get the corresponding properties
+            var propertyNodeGuids = graphView.selection.OfType<MaterialNodeView>().Where(x => (x.node is PropertyNode)).Select(x => ((PropertyNode)x.node).propertyGuid);
+            var metaProperties = graphView.graph.properties.Where(x => propertyNodeGuids.Contains(x.guid));
+
             var copyPasteGraph = new CopyPasteGraph(
+                    graphView.graph.guid,
                     graphView.selection.OfType<MaterialNodeView>().Where(x => !(x.node is PropertyNode)).Select(x => x.node as INode),
-                    graphView.selection.OfType<Edge>().Select(x => x.userData as IEdge));
+                    graphView.selection.OfType<Edge>().Select(x => x.userData as IEdge),
+                    graphView.selection.OfType<BlackboardField>().Select(x => x.userData as IShaderProperty),
+                    metaProperties);
 
             var deserialized = CopyPasteGraph.FromJson(JsonUtility.ToJson(copyPasteGraph, false));
             if (deserialized == null)
@@ -282,7 +261,6 @@ namespace UnityEditor.ShaderGraph.Drawing
                     var inputSlotRef = new SlotReference(remappedInputNodeGuid, inputSlot.slotId);
                     subGraph.Connect(outputSlotRef, inputSlotRef);
                 }
-
                 // one edge needs to go to outside world
                 else if (outputSlotExistsInSubgraph)
                 {
@@ -312,6 +290,12 @@ namespace UnityEditor.ShaderGraph.Drawing
                 {
                     case ConcreteSlotValueType.Texture2D:
                         prop = new TextureShaderProperty();
+                        break;
+                    case ConcreteSlotValueType.Texture2DArray:
+                        prop = new Texture2DArrayShaderProperty();
+                        break;
+                    case ConcreteSlotValueType.Texture3D:
+                        prop = new Texture3DShaderProperty();
                         break;
                     case ConcreteSlotValueType.Cubemap:
                         prop = new CubemapShaderProperty();
@@ -419,8 +403,6 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             File.WriteAllText(path, EditorJsonUtility.ToJson(graph, true));
             AssetDatabase.ImportAsset(path);
-
-            UpdateDependantGraphs();
         }
 
         void UpdateShaderGraphOnDisk(string path)

@@ -4,11 +4,14 @@ using System.Linq;
 using UnityEditor.Graphing;
 using UnityEditor.Graphing.Util;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
+using UnityEngine.Experimental.UIElements;
 
 namespace UnityEditor.ShaderGraph
 {
     [Serializable]
-    public abstract class MasterNode<T> : AbstractMaterialNode, IMasterNode where T : class, ISubShader
+    public abstract class MasterNode<T> : AbstractMaterialNode, IMasterNode, IHasSettings
+        where T : class, ISubShader
     {
         [NonSerialized]
         List<T> m_SubShaders = new List<T>();
@@ -56,7 +59,7 @@ namespace UnityEditor.ShaderGraph
             Dirty(ModificationScope.Graph);
         }
 
-        public string GetShader(GenerationMode mode, string outputName, out List<PropertyCollector.TextureInfo> configuredTextures)
+        public string GetShader(GenerationMode mode, string outputName, out List<PropertyCollector.TextureInfo> configuredTextures, List<string> sourceAssetDependencyPaths = null)
         {
             var activeNodeList = ListPool<INode>.Get();
             NodeUtils.DepthFirstCollectNodesFromNode(activeNodeList, this);
@@ -70,27 +73,28 @@ namespace UnityEditor.ShaderGraph
             foreach (var activeNode in activeNodeList.OfType<AbstractMaterialNode>())
                 activeNode.CollectShaderProperties(shaderProperties, mode);
 
-            var finalShader = new ShaderGenerator();
-            finalShader.AddShaderChunk(string.Format(@"Shader ""{0}""", outputName), false);
-            finalShader.AddShaderChunk("{", false);
-            finalShader.Indent();
+            var finalShader = new ShaderStringBuilder();
+            finalShader.AppendLine(@"Shader ""{0}""", outputName);
+            using (finalShader.BlockScope())
+            {
+                finalShader.AppendLine("Properties");
+                using (finalShader.BlockScope())
+                {
+                    finalShader.AppendLine(shaderProperties.GetPropertiesBlock(0));
+                }
 
-            finalShader.AddShaderChunk("Properties", false);
-            finalShader.AddShaderChunk("{", false);
-            finalShader.Indent();
-            finalShader.AddShaderChunk(shaderProperties.GetPropertiesBlock(2), false);
-            finalShader.Deindent();
-            finalShader.AddShaderChunk("}", false);
+                foreach (var subShader in m_SubShaders)
+                    finalShader.AppendLines(subShader.GetSubshader(this, mode, sourceAssetDependencyPaths));
 
-            foreach (var subShader in m_SubShaders)
-                finalShader.AddShaderChunk(subShader.GetSubshader(this, mode), true);
-
-            finalShader.AddShaderChunk(@"FallBack ""Hidden/InternalErrorShader""", false);
-            finalShader.Deindent();
-            finalShader.AddShaderChunk("}", false);
-
+                finalShader.AppendLine(@"FallBack ""Hidden/InternalErrorShader""");
+            }
             configuredTextures = shaderProperties.GetConfiguredTexutres();
-            return finalShader.GetShaderString(0);
+            return finalShader.ToString();
+        }
+
+        public bool IsPipelineCompatible(IRenderPipeline renderPipeline)
+        {
+            return true;
         }
 
         public override void OnBeforeSerialize()
@@ -102,9 +106,9 @@ namespace UnityEditor.ShaderGraph
         public override void OnAfterDeserialize()
         {
             m_SubShaders = SerializationHelper.Deserialize<T>(m_SerializableSubShaders, GraphUtil.GetLegacyTypeRemapping());
+            m_SubShaders.RemoveAll(x => x == null);
             m_SerializableSubShaders = null;
             base.OnAfterDeserialize();
-
         }
 
         public override void UpdateNodeAfterDeserialization()
@@ -129,6 +133,21 @@ namespace UnityEditor.ShaderGraph
                     }
                 }
             }
+        }
+
+        public VisualElement CreateSettingsElement()
+        {
+            var container = new VisualElement();
+            var commonSettingsElement = CreateCommonSettingsElement();
+            if (commonSettingsElement != null)
+                container.Add(commonSettingsElement);
+
+            return container;
+        }
+
+        protected virtual VisualElement CreateCommonSettingsElement()
+        {
+            return null;
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor.Graphing;
 using UnityEditor.ShaderGraph.Drawing.Slots;
 using UnityEngine;
@@ -24,9 +25,9 @@ namespace UnityEditor.ShaderGraph
             string shaderOutputName,
             SlotType slotType,
             bool value,
-            ShaderStage shaderStage = ShaderStage.Dynamic,
+            ShaderStageCapability stageCapability = ShaderStageCapability.All,
             bool hidden = false)
-            : base(slotId, displayName, shaderOutputName, slotType, shaderStage, hidden)
+            : base(slotId, displayName, shaderOutputName, slotType, stageCapability, hidden)
         {
             m_DefaultValue = value;
             m_Value = value;
@@ -71,14 +72,14 @@ namespace UnityEditor.ShaderGraph
         public override SlotValueType valueType { get { return SlotValueType.Boolean; } }
         public override ConcreteSlotValueType concreteValueType { get { return ConcreteSlotValueType.Boolean; } }
 
-        public override PreviewProperty GetPreviewProperty(string name)
+        public override void GetPreviewProperties(List<PreviewProperty> properties, string name)
         {
             var pp = new PreviewProperty(PropertyType.Boolean)
             {
                 name = name,
                 booleanValue = value
             };
-            return pp;
+            properties.Add(pp);
         }
 
         public override void CopyValuesFrom(MaterialSlot foundSlot)

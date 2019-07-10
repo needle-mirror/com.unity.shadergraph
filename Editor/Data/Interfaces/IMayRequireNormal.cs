@@ -1,10 +1,10 @@
-﻿using UnityEditor.Graphing;
+using UnityEditor.Graphing;
 
 namespace UnityEditor.ShaderGraph
 {
     public interface IMayRequireNormal
     {
-        NeededCoordinateSpace RequiresNormal();
+        NeededCoordinateSpace RequiresNormal(ShaderStageCapability stageCapability = ShaderStageCapability.All);
     }
 
     public static class MayRequireNormalExtensions

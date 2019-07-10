@@ -55,9 +55,9 @@ namespace UnityEditor.ShaderGraph
         private bool m_InvertX = false;
 
         [ToggleControl("Invert X")]
-        public Toggle invertX
+        public ToggleData invertX
         {
-            get { return new Toggle(m_InvertX); }
+            get { return new ToggleData(m_InvertX); }
             set
             {
                 if (m_InvertX == value.isOn)
@@ -71,9 +71,9 @@ namespace UnityEditor.ShaderGraph
         private bool m_InvertY = true;
 
         [ToggleControl("Invert Y")]
-        public Toggle invertY
+        public ToggleData invertY
         {
-            get { return new Toggle(m_InvertY); }
+            get { return new ToggleData(m_InvertY); }
             set
             {
                 if (m_InvertY == value.isOn)
@@ -127,30 +127,30 @@ namespace UnityEditor.ShaderGraph
             });
         }
 
-        public void GenerateNodeFunction(FunctionRegistry registry, GenerationMode generationMode)
+        public void GenerateNodeFunction(FunctionRegistry registry, GraphContext graphContext, GenerationMode generationMode)
         {
             registry.ProvideFunction(GetFunctionName(), s =>
-            {
-                s.AppendLine("void {0} ({1} UV, {2} Width, {3} Height, {4} Tile, {5}2 Invert, out {6} Out)",
-                    GetFunctionName(),
-                    FindInputSlot<MaterialSlot>(UVSlotId).concreteValueType.ToString(precision),
-                    FindInputSlot<MaterialSlot>(WidthSlotId).concreteValueType.ToString(precision),
-                    FindInputSlot<MaterialSlot>(HeightSlotId).concreteValueType.ToString(precision),
-                    FindInputSlot<MaterialSlot>(TileSlotId).concreteValueType.ToString(precision),
-                    precision,
-                    FindOutputSlot<MaterialSlot>(OutputSlotId).concreteValueType.ToString(precision));
-                using (s.BlockScope())
                 {
-                    s.AppendLine("Tile = fmod(Tile, Width*Height);");
-                    s.AppendLine("{0}2 tileCount = {0}2(1.0, 1.0) / {0}2(Width, Height);", precision);
-                    s.AppendLine("{0} tileY = abs(Invert.y * Height - (floor(Tile * tileCount.x) + Invert.y * 1));", precision);
-                    s.AppendLine("{0} tileX = abs(Invert.x * Width - ((Tile - Width * floor(Tile * tileCount.x)) + Invert.x * 1));", precision);
-                    s.AppendLine("Out = (UV + {0}2(tileX, tileY)) * tileCount;", precision);
-                }
-            });
+                    s.AppendLine("void {0} ({1} UV, {2} Width, {3} Height, {4} Tile, {5}2 Invert, out {6} Out)",
+                        GetFunctionName(),
+                        FindInputSlot<MaterialSlot>(UVSlotId).concreteValueType.ToString(precision),
+                        FindInputSlot<MaterialSlot>(WidthSlotId).concreteValueType.ToString(precision),
+                        FindInputSlot<MaterialSlot>(HeightSlotId).concreteValueType.ToString(precision),
+                        FindInputSlot<MaterialSlot>(TileSlotId).concreteValueType.ToString(precision),
+                        precision,
+                        FindOutputSlot<MaterialSlot>(OutputSlotId).concreteValueType.ToString(precision));
+                    using (s.BlockScope())
+                    {
+                        s.AppendLine("Tile = fmod(Tile, Width*Height);");
+                        s.AppendLine("{0}2 tileCount = {0}2(1.0, 1.0) / {0}2(Width, Height);", precision);
+                        s.AppendLine("{0} tileY = abs(Invert.y * Height - (floor(Tile * tileCount.x) + Invert.y * 1));", precision);
+                        s.AppendLine("{0} tileX = abs(Invert.x * Width - ((Tile - Width * floor(Tile * tileCount.x)) + Invert.x * 1));", precision);
+                        s.AppendLine("Out = (UV + {0}2(tileX, tileY)) * tileCount;", precision);
+                    }
+                });
         }
 
-        public bool RequiresMeshUV(UVChannel channel)
+        public bool RequiresMeshUV(UVChannel channel, ShaderStageCapability stageCapability)
         {
             s_TempSlots.Clear();
             GetInputSlots(s_TempSlots);

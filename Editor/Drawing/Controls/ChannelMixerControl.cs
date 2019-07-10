@@ -140,7 +140,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Controls
                     m_ChannelMixer.outRed[inChannel] = value;
                     break;
             }
-            switch(inChannel)
+            switch (inChannel)
             {
                 case 1:
                     m_GreenInputField.value = value;
@@ -173,7 +173,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Controls
                     m_ChannelMixer.outRed[inChannel] = value;
                     break;
             }
-            switch(inChannel)
+            switch (inChannel)
             {
                 case 1:
                     m_GreenSlider.value = value;
@@ -186,7 +186,6 @@ namespace UnityEditor.ShaderGraph.Drawing.Controls
                     break;
             }
             m_PropertyInfo.SetValue(m_Node, m_ChannelMixer, null);
-
             this.MarkDirtyRepaint();
         }
 

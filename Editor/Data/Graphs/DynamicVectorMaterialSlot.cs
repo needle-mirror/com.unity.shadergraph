@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.Graphing;
 using UnityEditor.ShaderGraph.Drawing.Slots;
@@ -30,9 +31,9 @@ namespace UnityEditor.ShaderGraph
             string shaderOutputName,
             SlotType slotType,
             Vector4 value,
-            ShaderStage shaderStage = ShaderStage.Dynamic,
+            ShaderStageCapability stageCapability = ShaderStageCapability.All,
             bool hidden = false)
-            : base(slotId, displayName, shaderOutputName, slotType, shaderStage, hidden)
+            : base(slotId, displayName, shaderOutputName, slotType, stageCapability, hidden)
         {
             m_Value = value;
         }
@@ -63,7 +64,7 @@ namespace UnityEditor.ShaderGraph
             m_ConcreteValueType = valueType;
         }
 
-        public override PreviewProperty GetPreviewProperty(string name)
+        public override void GetPreviewProperties(List<PreviewProperty> properties, string name)
         {
             var propType = ConvertConcreteSlotValueTypeToPropertyType(concreteValueType);
             var pp = new PreviewProperty(propType) { name = name };
@@ -71,7 +72,7 @@ namespace UnityEditor.ShaderGraph
                 pp.floatValue = value.x;
             else
                 pp.vector4Value = new Vector4(value.x, value.y, value.z, value.w);
-            return pp;
+            properties.Add(pp);
         }
 
         protected override string ConcreteSlotValueAsVariable(AbstractMaterialNode.OutputPrecision precision)

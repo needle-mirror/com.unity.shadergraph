@@ -48,7 +48,7 @@ namespace UnityEditor.ShaderGraph
             result.Append("\", CUBE) = \"\" {}");
             return result.ToString();
         }
-        
+
         public override string GetPropertyDeclarationString(string delimiter = ";")
         {
             return string.Format("TEXTURECUBE({0}){1} SAMPLER(sampler{0}){1}", referenceName, delimiter);
@@ -71,6 +71,14 @@ namespace UnityEditor.ShaderGraph
         public override INode ToConcreteNode()
         {
             return new CubemapAssetNode { cubemap = value.cubemap };
+        }
+
+        public override IShaderProperty Copy()
+        {
+            var copied = new CubemapShaderProperty();
+            copied.displayName = displayName;
+            copied.value = value;
+            return copied;
         }
     }
 }
