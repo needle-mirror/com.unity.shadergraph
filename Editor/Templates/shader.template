@@ -1,0 +1,12 @@
+Shader "${ShaderName}" 
+{
+	Properties 
+	{
+${ShaderPropertiesHeader}
+	}	
+	
+${SubShader}
+
+	FallBack "Diffuse"
+	CustomEditor "LegacyIlluminShaderGUI"
+}
