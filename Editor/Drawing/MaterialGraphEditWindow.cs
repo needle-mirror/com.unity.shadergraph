@@ -11,6 +11,8 @@ using Object = UnityEngine.Object;
 using Edge = UnityEditor.Experimental.UIElements.GraphView.Edge;
 #if UNITY_2018_1
 using GeometryChangedEvent = UnityEngine.Experimental.UIElements.PostLayoutEvent;
+#else
+using GeometryChangedEvent = UnityEngine.Experimental.UIElements.GeometryChangedEvent;
 #endif
 
 namespace UnityEditor.ShaderGraph.Drawing
@@ -440,7 +442,6 @@ namespace UnityEditor.ShaderGraph.Drawing
             shaderImporter.SaveAndReimport();
             AssetDatabase.ImportAsset(path);
         }
-
 
         private void Rebuild()
         {
