@@ -2,7 +2,7 @@
     "dependencies": {}, 
     "description": "Shader Graph", 
     "displayName": "Shader Graph", 
-    "gitHead": "8a24a118db135c785fa96adc0edefad30f59d7a8", 
+    "gitHead": "a90fd23dca5d4d98b06a51b9057a78eb3cb5217e", 
     "name": "com.unity.shadergraph", 
     "repoPackagePath": "com.unity.shadergraph", 
     "repository": {
@@ -10,5 +10,5 @@
         "url": "ssh://git@github.com/Unity-Technologies/ScriptableRenderLoop.git"
     }, 
     "unity": "2018.2", 
-    "version": "2.0.7-preview"
+    "version": "2.0.8-preview"
 }
