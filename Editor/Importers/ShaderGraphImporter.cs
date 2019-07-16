@@ -74,7 +74,7 @@ Shader ""Hidden/GraphErrorShader2""
             var sourceAssetDependencyPaths = new List<string>();
             var text = GetShaderText(path, out configuredTextures, sourceAssetDependencyPaths, out var graph);
             var shader = ShaderUtil.CreateShaderAsset(text);
-            
+
             if (graph != null && graph.messageManager.nodeMessagesChanged)
             {
                 foreach (var pair in graph.messageManager.GetNodeMessages())

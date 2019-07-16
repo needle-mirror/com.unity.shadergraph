@@ -1209,6 +1209,7 @@ namespace UnityEditor.ShaderGraph
                     {
                         hlslName = $"{hlslName}_{slot.id}";
                     }
+                  
                     surfaceDescriptionStruct.AppendLine("{0} {1};", slot.concreteValueType.ToShaderString(slot.owner.concretePrecision), hlslName);
 
                     if (activeFields != null)
@@ -1301,7 +1302,7 @@ namespace UnityEditor.ShaderGraph
                     {
                         var hlslSafeName = $"{NodeUtils.GetHLSLSafeName(slot.shaderOutputName)}_{slot.id}";
                         surfaceDescriptionFunction.AppendLine("surface.{0} = {1};",
-                            hlslSafeName, rootNode.GetSlotValue(slot.id, mode));
+                            hlslSafeName, rootNode.GetSlotValue(slot.id, mode, rootNode.concretePrecision));
                     }
                 }
 
@@ -1476,43 +1477,6 @@ namespace UnityEditor.ShaderGraph
             }
 
             return string.Format(duplicateFormat, name, duplicateNumber);
-        }
-
-        public static SlotValueType ToSlotValueType(this ConcreteSlotValueType concreteValueType)
-        {
-            switch(concreteValueType)
-            {
-                case ConcreteSlotValueType.SamplerState:
-                    return SlotValueType.SamplerState;
-                case ConcreteSlotValueType.Matrix2:
-                    return SlotValueType.Matrix2;
-                case ConcreteSlotValueType.Matrix3:
-                    return SlotValueType.Matrix3;
-                case ConcreteSlotValueType.Matrix4:
-                    return SlotValueType.Matrix4;
-                case ConcreteSlotValueType.Texture2D:
-                    return SlotValueType.Texture2D;
-                case ConcreteSlotValueType.Texture2DArray:
-                    return SlotValueType.Texture2DArray;
-                case ConcreteSlotValueType.Texture3D:
-                    return SlotValueType.Texture3D;
-                case ConcreteSlotValueType.Cubemap:
-                    return SlotValueType.Cubemap;
-                case ConcreteSlotValueType.Gradient:
-                    return SlotValueType.Gradient;
-                case ConcreteSlotValueType.Vector4:
-                    return SlotValueType.Vector4;
-                case ConcreteSlotValueType.Vector3:
-                    return SlotValueType.Vector3;
-                case ConcreteSlotValueType.Vector2:
-                    return SlotValueType.Vector2;
-                case ConcreteSlotValueType.Vector1:
-                    return SlotValueType.Vector1;
-                case ConcreteSlotValueType.Boolean:
-                    return SlotValueType.Boolean;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
         }
 
         public static bool WriteToFile(string path, string content)

@@ -62,7 +62,6 @@ namespace UnityEditor.ShaderGraph
             else
                 samplerValue = string.Format("sampler{0}", GetSlotValue(TextureInputId, generationMode));
 
-            
             sb.AppendLine("{0} {1};", FindOutputSlot<MaterialSlot>(OutputSlotId).concreteValueType.ToShaderString(), GetVariableNameForSlot(OutputSlotId));
             sb.AppendLine("{0}({1}, {2}, {3}, {4}, {5}, {6});", GetFunctionName(), textureValue, samplerValue, uvValue, offsetValue, strengthValue, outputValue);
         }

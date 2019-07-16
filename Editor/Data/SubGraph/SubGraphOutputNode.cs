@@ -14,11 +14,9 @@ namespace UnityEditor.ShaderGraph
     {
         static string s_MissingOutputSlot = "A Sub Graph must have at least one output slot";
 
-        public const string kNodeName = "Output";
-
         public SubGraphOutputNode()
         {
-            name = kNodeName;
+            name = "Output";
         }
 
         void ValidateShaderStage()
@@ -68,8 +66,7 @@ namespace UnityEditor.ShaderGraph
             {
                 owner.AddValidationError(tempId, s_MissingOutputSlot, ShaderCompilerMessageSeverity.Warning);
             }
-            
-            ValidateSlotName();
+
             base.ValidateNode();
         }
 

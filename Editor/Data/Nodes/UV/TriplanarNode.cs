@@ -78,7 +78,6 @@ namespace UnityEditor.ShaderGraph
         // Node generations
         public virtual void GenerateNodeCode(ShaderStringBuilder sb, GraphContext graphContext, GenerationMode generationMode)
         {
-            
             sb.AppendLine("$precision3 {0}_UV = {1} * {2};", GetVariableNameForNode(),
                 GetSlotValue(PositionInputId, generationMode), GetSlotValue(TileInputId, generationMode));
 

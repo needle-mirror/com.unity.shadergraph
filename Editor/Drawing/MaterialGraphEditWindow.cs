@@ -267,7 +267,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                     graphView.selection.OfType<IShaderNodeView>().Where(x => !(x.node is PropertyNode || x.node is SubGraphOutputNode)).Select(x => x.node).Where(x => x.allowedInSubGraph).ToArray(),
                     graphView.selection.OfType<Edge>().Select(x => x.userData as IEdge),
                     graphView.selection.OfType<BlackboardField>().Select(x => x.userData as AbstractShaderProperty),
-                    metaProperties);
+                    metaProperties,
+                    graphView.selection.OfType<StickyNote>().Select(x => x.userData));
 
             var deserialized = CopyPasteGraph.FromJson(JsonUtility.ToJson(copyPasteGraph, false));
             if (deserialized == null)
@@ -283,6 +284,16 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
             subGraph.AddNode(subGraphOutputNode);
 
+            var groupGuidMap = new Dictionary<Guid, Guid>();
+            foreach (GroupData groupData in deserialized.groups)
+            {
+                var oldGuid = groupData.guid;
+                var newGuid = groupData.RewriteGuid();
+                groupGuidMap[oldGuid] = newGuid;
+                subGraph.CreateGroup(groupData);
+            }
+
+            List<Guid> groupGuids = new List<Guid>();
             var nodeGuidMap = new Dictionary<Guid, Guid>();
             foreach (var node in deserialized.GetNodes<AbstractMaterialNode>())
             {
@@ -292,7 +303,36 @@ namespace UnityEditor.ShaderGraph.Drawing
                 var drawState = node.drawState;
                 drawState.position = new Rect(drawState.position.position - middle, drawState.position.size);
                 node.drawState = drawState;
+
+                if (!groupGuids.Contains(node.groupGuid))
+                {
+                    groupGuids.Add(node.groupGuid);
+                }
+
+                // Checking if the group guid is also being copied.
+                // If not then nullify that guid
+                if (node.groupGuid != Guid.Empty)
+                {
+                    node.groupGuid = !groupGuidMap.ContainsKey(node.groupGuid) ? Guid.Empty : groupGuidMap[node.groupGuid];
+                }
+
                 subGraph.AddNode(node);
+            }
+
+            foreach (var note in deserialized.stickyNotes)
+            {
+                if (!groupGuids.Contains(note.groupGuid))
+                {
+                    groupGuids.Add(note.groupGuid);
+                }
+
+                if (note.groupGuid != Guid.Empty)
+                {
+                    note.groupGuid = !groupGuidMap.ContainsKey(note.groupGuid) ? Guid.Empty : groupGuidMap[note.groupGuid];
+                }
+
+                note.RewriteGuid();
+                subGraph.AddStickyNote(note);
             }
 
             // figure out what needs remapping
@@ -333,6 +373,12 @@ namespace UnityEditor.ShaderGraph.Drawing
                     (key, edges) => new { slotRef = key, edges = edges.ToList() });
 
             var externalInputNeedingConnection = new List<KeyValuePair<IEdge, AbstractShaderProperty>>();
+
+            var amountOfProps = uniqueIncomingEdges.Count();
+            const int height = 40;
+            const int subtractHeight = 20;
+            var propPos = new Vector2(0, -((amountOfProps / 2) + height) - subtractHeight);
+
             foreach (var group in uniqueIncomingEdges)
             {
                 var sr = group.slotRef;
@@ -399,7 +445,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                     var propNode = new PropertyNode();
                     {
                         var drawState = propNode.drawState;
-                        drawState.position = new Rect(new Vector2(bounds.xMin - 300f, 0f), drawState.position.size);
+                        drawState.position = new Rect(new Vector2(bounds.xMin - 300f, 0f) + propPos, drawState.position.size);
+                        propPos += new Vector2(0, height);
                         propNode.drawState = drawState;
                     }
                     subGraph.AddNode(propNode);
@@ -449,6 +496,13 @@ namespace UnityEditor.ShaderGraph.Drawing
             var ds = subGraphNode.drawState;
             ds.position = new Rect(middle - new Vector2(100f, 150f), Vector2.zero);
             subGraphNode.drawState = ds;
+
+            // Add the subgraph into the group if the nodes was all in the same group group
+            if (groupGuids.Count == 1)
+            {
+                subGraphNode.groupGuid = groupGuids[0];
+            }
+
             graphObject.graph.AddNode(subGraphNode);
             subGraphNode.asset = loadedSubGraph;
 
@@ -463,15 +517,16 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
 
             graphObject.graph.RemoveElements(
-                graphView.selection.OfType<IShaderNodeView>().Select(x => x.node).Where(x => x.allowedInSubGraph),
-                Enumerable.Empty<IEdge>(),
-                Enumerable.Empty<GroupData>());
+                graphView.selection.OfType<IShaderNodeView>().Select(x => x.node).Where(x => x.allowedInSubGraph).ToArray(),
+                new IEdge[] {},
+                new GroupData[] {},
+                graphView.selection.OfType<StickyNote>().Select(x => x.userData).ToArray());
             graphObject.graph.ValidateGraph();
         }
 
         void UpdateShaderGraphOnDisk(string path)
         {
-            if (FileUtilities.WriteShaderGraphToDisk(path, graphObject.graph))
+            if(FileUtilities.WriteShaderGraphToDisk(path, graphObject.graph))
                 AssetDatabase.ImportAsset(path);
         }
 

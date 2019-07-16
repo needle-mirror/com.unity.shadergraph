@@ -80,7 +80,6 @@ namespace UnityEditor.ShaderGraph.Drawing
                 m_PreviewContainer = new VisualElement
                 {
                     name = "previewContainer",
-                    cacheAsBitmap = true,
                     style = { overflow = Overflow.Hidden },
                     pickingMode = PickingMode.Ignore
                 };
@@ -134,7 +133,6 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_PortInputContainer = new VisualElement
             {
                 name = "portInputContainer",
-                cacheAsBitmap = true,
                 style = { overflow = Overflow.Hidden },
                 pickingMode = PickingMode.Ignore
             };
@@ -234,18 +232,18 @@ namespace UnityEditor.ShaderGraph.Drawing
         static readonly StyleColor noColor = new StyleColor(StyleKeyword.Null);
         public void SetColor(Color color)
         {
-            m_TitleContainer.style.borderColor = color;
+            m_TitleContainer.style.borderBottomColor = color;
         }
         
         public void ResetColor()
         {
-            m_TitleContainer.style.borderColor = noColor;
+            m_TitleContainer.style.borderBottomColor = noColor;
         }
 
 
         public Color GetColor()
         {
-            return m_TitleContainer.resolvedStyle.borderColor;
+            return m_TitleContainer.resolvedStyle.borderBottomColor;
         }
 
         void OnGeometryChanged(GeometryChangedEvent evt)
@@ -504,7 +502,14 @@ namespace UnityEditor.ShaderGraph.Drawing
                     {
                         port.slot = newSlot;
                         var portInputView = m_PortInputContainer.Children().OfType<PortInputView>().FirstOrDefault(x => x.slot.id == currentSlot.id);
-                        portInputView.UpdateSlot(newSlot);
+                        if (newSlot.isConnected)
+                        {
+                            portInputView?.RemoveFromHierarchy();
+                        }
+                        else
+                        {
+                            portInputView?.UpdateSlot(newSlot);
+                        }
 
                         slots.Remove(newSlot);
                     }
@@ -568,19 +573,20 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             foreach (var port in inputContainer.Children().OfType<ShaderPort>())
             {
-                if (!m_PortInputContainer.Children().OfType<PortInputView>().Any(a => Equals(a.slot, port.slot)))
+                if (port.slot.isConnected)
                 {
-                    var portInputView = new PortInputView(port.slot) { style = { position = Position.Absolute } };
-                    m_PortInputContainer.Add(portInputView);
-                    if (float.IsNaN(port.layout.width))
-                    {
-                        port.RegisterCallback<GeometryChangedEvent>(UpdatePortInput);
-                    }
-                    else
-                    {
-                        SetPortInputPosition(port, portInputView);
-                    }
+                    continue;
                 }
+
+                var portInputView = m_PortInputContainer.Children().OfType<PortInputView>().FirstOrDefault(a => Equals(a.slot, port.slot));
+                if (portInputView == null)
+                {
+                    portInputView = new PortInputView(port.slot) { style = { position = Position.Absolute } };
+                    m_PortInputContainer.Add(portInputView);
+                    SetPortInputPosition(port, portInputView);
+                }
+                
+                port.RegisterCallback<GeometryChangedEvent>(UpdatePortInput);
             }
         }
 
@@ -598,12 +604,15 @@ namespace UnityEditor.ShaderGraph.Drawing
             inputView.parent.style.height = inputContainer.layout.height;
         }
 
-        public void UpdatePortInputVisibilities()
+        void UpdatePortInputVisibilities()
         {
-            foreach (var portInputView in m_PortInputContainer.Children().OfType<PortInputView>().ToList())
+            if (expanded)
             {
-                var slot = portInputView.slot;
-                portInputView.style.display = expanded && !node.owner.GetEdges(node.GetSlotReference(slot.id)).Any() ? DisplayStyle.Flex : DisplayStyle.None;
+                m_PortInputContainer.style.display = StyleKeyword.Null;
+            }
+            else
+            {
+                m_PortInputContainer.style.display = DisplayStyle.None;
             }
         }
 
