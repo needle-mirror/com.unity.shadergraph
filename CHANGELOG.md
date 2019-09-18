@@ -4,6 +4,17 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [7.1.2] - 2019-09-19
+### Added
+- Added samples for Procedural Patterns to the package.
+- You can now use the right-click context menu to delete Sticky Notes.
+
+### Fixed 
+- The Editor now displays correct errors for missing or deleted Sub Graph Assets.
+- You can no longer drag and drop recursive nodes onto Sub Graph Assets.
+- Shader Graph no longer references the `NUnit` package.
+- Fixed a shader compatibility issue in the SRP Batcher when you use a hybrid instancing custom variable.
+
 ## [7.1.1] - 2019-09-05
 ### Added
 - You can now define shader keywords on the Blackboard. Use these keywords on the graph to create static branches in the generated shader.
