@@ -286,6 +286,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                 if (oldShader != null)
                     ShaderUtil.ClearShaderMessages(oldShader);
 
+                ShaderGraphAnalytics.SendShaderGraphEvent(selectedGuid, graphObject.graph);
+
                 UpdateShaderGraphOnDisk(path);
 
                 if (GraphData.onSaveGraph != null)
@@ -534,6 +536,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                     var fromPropertyNode = fromNode as PropertyNode;
                     var fromProperty = fromPropertyNode != null ? materialGraph.properties.FirstOrDefault(p => p.guid == fromPropertyNode.propertyGuid) : null;
                     prop.displayName = fromProperty != null ? fromProperty.displayName : fromSlot.concreteValueType.ToString();
+                    prop.displayName = GraphUtil.SanitizeName(subGraph.addedInputs.Select(p => p.displayName), "{0} ({1})", prop.displayName);
 
                     subGraph.AddGraphInput(prop);
                     var propNode = new PropertyNode();
