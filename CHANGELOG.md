@@ -4,70 +4,31 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [7.2.1] - 2020-02-14
-
-Version Updated
-The version number for this package has increased due to a version update of a related graphics package.
-
-## [7.2.0] - 2020-02-10
-
-### Fixed 
-- Fixed an issue where Shader Graph shaders using the `CameraNode` failed to build on PS4 with "incompatible argument list for call to 'mul'".
-- Fixed a bug where the redo functionality in Shader Graph often didn't work.
-- Fixed a bug where the input fields sometimes didn't render properly. [1176268](https://issuetracker.unity3d.com/issues/shadergraph-input-fields-get-cut-off-after-minimizing-and-maximizing-become-unusable)
-- Fixed a bug where the Gradient property didn't work with all system locales. [1140924](https://issuetracker.unity3d.com/issues/shader-graph-shader-doesnt-compile-when-using-a-gradient-property-and-a-regional-format-with-comma-decimal-separator-is-used)
-- Fixed a bug where Properties in the Blackboard could have duplicate names.
-- Fixed a bug where the `Vertex Normal` slot on master nodes needed vertex normal data input to compile. [1193348](https://issuetracker.unity3d.com/issues/hdrp-unlit-shader-plugging-anything-into-the-vertex-normal-input-causes-shader-to-fail-to-compile)
-- Fixed a bug where `GetWorldSpaceNormalizeViewDir()` could cause undeclared indentifier errors. [1190606](https://issuetracker.unity3d.com/issues/view-dir-node-plugged-into-vertex-position-creates-error-undeclared-identifier-getworldspacenormalizeviewdir)
-- Fixed a bug where Emission on PBR Shader Graphs in the Universal RP would not bake to lightmaps. [1190225](https://issuetracker.unity3d.com/issues/emissive-custom-pbr-shadergraph-material-only-works-for-primitive-unity-objects)
-- Fixed a bug where Shader Graph shaders were writing to `POSITION` instead of `SV_POSITION`, which caused PS4 builds to fail.
-- Fixed a bug where the error `Output value 'vert' is not initialized` displayed on all PBR graphs in Universal. [1210710](https://issuetracker.unity3d.com/issues/output-value-vert-is-not-completely-initialized-error-is-thrown-when-pbr-graph-is-created-using-urp)
-- Documentation links on nodes now point to the correct URLs and package versions.
-- Fixed a bug where parts of the Blackboard remain visible even after disabling its visibility.
-- Fixed a number of memory leaks causing Shader Graph assets to stay in memory after closing the Shader Graph window.
-
-## [7.1.8] - 2020-01-20
-### Fixed
-- Fixed a number of memory leaks that caused Shader Graph assets to stay in memory after closing the Shader Graph window.
-
-## [7.1.7] - 2019-12-11
-### Added
-- Added StencilOverride support.
+## [8.0.1] - 2020-05-25
 
 ### Fixed
-- You can now smoothly edit controls on the `Dielectric Specular` node.
-- Fixed shader compile errors when trying to use tessellation shaders with PlayStation VR on PS4.
+- Fix Changelog
 
-## [7.1.6] - 2019-11-22
-### Fixed
-- Errors no longer occur when you change the precision of Sub Graphs. [1158413](https://issuetracker.unity3d.com/issues/shadergraph-changing-precision-of-sg-with-subgraphs-that-still-use-the-other-precision-breaks-the-generated-shader)
-- Fixed an error where the UV channel drop-down menu on nodes had clipped text. [1188710](https://issuetracker.unity3d.com/issues/shader-graph-all-uv-dropdown-value-is-clipped-under-shader-graph)
-- Fixed an issue where adding the first output to a Sub Graph without any outputs prior caused Shader Graphs containing the Sub Graph to break.
+## [8.0.0] - 2020-05-25
 
-## [7.1.5] - 2019-11-15
-
-Version Updated
-The version number for this package has increased due to a version update of a related graphics package.
-
-## [7.1.4] - 2019-11-13
-
-Version Updated
-The version number for this package has increased due to a version update of a related graphics package.
-
-## [7.1.3] - 2019-11-04
-
-Version Updated
-The version number for this package has increased due to a version update of a related graphics package.
-
-## [7.1.2] - 2019-09-19
 ### Added
 - Added samples for Procedural Patterns to the package.
 - You can now use the right-click context menu to delete Sticky Notes.
+- You can now save your graph as a new Asset.
 - Added support for vertex skinning when you use the DOTS animation package.
+- You can now use the right-click context menu to set the precision on multiple selected nodes.
+- When you start the Editor, Shader Graph now displays Properties in the Blackboard as collapsed.
+- Updated the zoom level to let you zoom in further.
+- If Unity Editor Analytics are enabled, Shader Graph collects anonymous data about which nodes you use in your graphs. This helps the Shader Graph team focus our efforts on the most common graph scenarios, and better understand the needs of our customers. We don't track edge data and cannot recreate your graphs in any form.
+- The Create Node Menu now has a tree view and support for fuzzy field searching.
+- Added a drop-down menu to the PBR Master Node that lets you select the final coordinate space of normals delivered from the fragment function. 
+- Added support for users to drag and drop Blackboard Properties from one graph to another.
 
-### Fixed 
-- The Editor now displays correct errors for missing or deleted Sub Graph Assets.
-- You can no longer drag and drop recursive nodes onto Sub Graph Assets.
+### Changed
+- Changed the `Branch` node so that it uses a ternary operator (`Out = bool ? a : B`) instead of a linear interpolate function.
+
+### Fixed
+- Edges no longer produce errors when you save a Shader Graph.
 - Shader Graph no longer references the `NUnit` package.
 - Fixed a shader compatibility issue in the SRP Batcher when you use a hybrid instancing custom variable.
 - Fixed an issue where Unity would crash when you imported a Shader Graph Asset with invalid formatting.
@@ -78,6 +39,32 @@ The version number for this package has increased due to a version update of a r
 - The Main Preview for Sprite Lit and Sprite Unlit master nodes now displays the correct color. [1184656](https://issuetracker.unity3d.com/issues/shadergraph-preview-for-lit-and-unlit-master-node-wrong-color-when-color-is-set-directly-on-master-node)
 - Shader Graph shaders in `Always Include Shaders` no longer crash builds. [1191757](https://issuetracker.unity3d.com/issues/lwrp-build-crashes-when-built-with-shadergraph-file-added-to-always-include-shaders-list)
 - The `Transform` node now correctly transforms Absolute World to Object.
+- Errors no longer occur when you change the precision of Sub Graphs. [1158413](https://issuetracker.unity3d.com/issues/shadergraph-changing-precision-of-sg-with-subgraphs-that-still-use-the-other-precision-breaks-the-generated-shader)
+- Fixed an error where the UV channel drop-down menu on nodes had clipped text. [1188710](https://issuetracker.unity3d.com/issues/shader-graph-all-uv-dropdown-value-is-clipped-under-shader-graph)
+- Added StencilOverride support.
+- Sticky Notes can now be grouped properly.
+- Fixed an issue where nodes couldn't be copied from a group.
+- Fixed an issue where adding the first output to a Sub Graph without any outputs prior caused Shader Graphs containing the Sub Graph to break.
+- Fixed an issue where Shader Graph shaders using the `CameraNode` failed to build on PS4 with "incompatible argument list for call to 'mul'".
+- Fixed a bug that caused problems with Blackboard property ordering.
+- Fixed a bug where the redo functionality in Shader Graph often didn't work.
+- Fixed a bug where the Gradient property didn't work with all system locales. [1140924](https://issuetracker.unity3d.com/issues/shader-graph-shader-doesnt-compile-when-using-a-gradient-property-and-a-regional-format-with-comma-decimal-separator-is-used)
+- Fixed a bug where Properties in the Blackboard could have duplicate names.
+- Fixed a bug where you could drag the Blackboard into a graph even when you disabled the Blackboard.
+- Fixed a bug where the `Vertex Normal` slot on master nodes needed vertex normal data input to compile. [1193348](https://issuetracker.unity3d.com/issues/hdrp-unlit-shader-plugging-anything-into-the-vertex-normal-input-causes-shader-to-fail-to-compile)
+- Fixed a bug where `GetWorldSpaceNormalizeViewDir()` could cause undeclared indentifier errors. [1190606](https://issuetracker.unity3d.com/issues/view-dir-node-plugged-into-vertex-position-creates-error-undeclared-identifier-getworldspacenormalizeviewdir)
+- Fixed a bug where Emission on PBR Shader Graphs in the Universal RP would not bake to lightmaps. [1190225](https://issuetracker.unity3d.com/issues/emissive-custom-pbr-shadergraph-material-only-works-for-primitive-unity-objects)
+- Fixed a bug where Shader Graph shaders were writing to `POSITION` instead of `SV_POSITION`, which caused PS4 builds to fail.
+- Fixed a bug where `Object to Tangent` transforms in the `Transform` node used the wrong matrix. [1162203](https://issuetracker.unity3d.com/issues/shadergraph-transform-node-from-object-to-tangent-space-uses-the-wrong-matrix)
+- Fixed an issue where boolean keywords in a Shader Graph caused HDRP Material features to fail. [1204827](https://issuetracker.unity3d.com/issues/hdrp-shadergraph-adding-a-boolean-keyword-to-an-hdrp-lit-shader-makes-material-features-not-work)
+- Fixed a bug where Object space normals scaled with Object Scale. 
+- Documentation links on nodes now point to the correct URLs and package versions.
+- Fixed a number of memory leaks that caused Shader Graph assets to stay in memory after closing the Shader Graph window.
+- Fixed a bug where using save as command on a subgraph would result in an exception being raised.
+- You can now smoothly edit controls on the `Dielectric Specular` node.
+- Fixed Blackboard Properties to support scientific notation.
+- Fixed a bug where the error `Output value 'vert' is not initialized` displayed on all PBR graphs in Universal. [1210710](https://issuetracker.unity3d.com/issues/output-value-vert-is-not-completely-initialized-error-is-thrown-when-pbr-graph-is-created-using-urp)
+- Fixed a bug where PBR and Unlit master nodes in Universal had Alpha Clipping enabled by default.
 
 ## [7.1.1] - 2019-09-05
 ### Added
@@ -99,6 +86,8 @@ The version number for this package has increased due to a version update of a r
 - PBR master nodes now calculate Global Illumination (GI) correctly.
 - PBR master nodes now apply surface normals.
 - PBR master nodes now apply fog.
+- The Editor now displays correct errors for missing or deleted Sub Graph Assets.
+- You can no longer drag and drop recursive nodes onto Sub Graph Assets.
 
 ## [7.0.1] - 2019-07-25
 ### Changed

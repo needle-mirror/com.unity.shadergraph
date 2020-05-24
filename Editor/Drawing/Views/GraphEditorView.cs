@@ -13,6 +13,7 @@ using UnityEditor.ShaderGraph.Internal;
 using UnityEngine.UIElements;
 using Edge = UnityEditor.Experimental.GraphView.Edge;
 using UnityEditor.VersionControl;
+using UnityEditor.Searcher;
 
 
 namespace UnityEditor.ShaderGraph.Drawing
@@ -58,6 +59,8 @@ namespace UnityEditor.ShaderGraph.Drawing
         FloatingWindowsLayout m_FloatingWindowsLayout;
 
         public Action saveRequested { get; set; }
+
+        public Action saveAsRequested { get; set; }
 
         public Func<bool> isCheckedOut { get; set; }
 
@@ -148,6 +151,11 @@ namespace UnityEditor.ShaderGraph.Drawing
                             saveRequested();
                     }
                     GUILayout.Space(6);
+                    if (GUILayout.Button("Save As...", EditorStyles.toolbarButton))
+                    {
+                        saveAsRequested();
+                    }
+                    GUILayout.Space(6);
                     if (GUILayout.Button("Show In Project", EditorStyles.toolbarButton))
                     {
                         if (showInProjectRequested != null)
@@ -219,7 +227,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             var content = new VisualElement { name = "content" };
             {
                 m_GraphView = new MaterialGraphView(graph) { name = "GraphView", viewDataKey = "MaterialGraphView" };
-                m_GraphView.SetupZoom(0.05f, ContentZoomer.DefaultMaxScale);
+                m_GraphView.SetupZoom(0.05f, 8);
                 m_GraphView.AddManipulator(new ContentDragger());
                 m_GraphView.AddManipulator(new SelectionDragger());
                 m_GraphView.AddManipulator(new RectangleSelector());
@@ -244,15 +252,17 @@ namespace UnityEditor.ShaderGraph.Drawing
                 }
             }
 
-            m_SearchWindowProvider = ScriptableObject.CreateInstance<SearchWindowProvider>();
+            m_SearchWindowProvider = ScriptableObject.CreateInstance<SearcherProvider>();
             m_SearchWindowProvider.Initialize(editorWindow, m_Graph, m_GraphView);
             m_GraphView.nodeCreationRequest = (c) =>
                 {
                     m_SearchWindowProvider.connectedPort = null;
-                    SearchWindow.Open(new SearchWindowContext(c.screenMousePosition), m_SearchWindowProvider);
+                    SearcherWindow.Show(editorWindow, (m_SearchWindowProvider as SearcherProvider).LoadSearchWindow(),
+                        item => (m_SearchWindowProvider as SearcherProvider).OnSearcherSelectEntry(item, c.screenMousePosition - editorWindow.position.position),
+                        c.screenMousePosition - editorWindow.position.position, null);
                 };
 
-            m_EdgeConnectorListener = new EdgeConnectorListener(m_Graph, m_SearchWindowProvider);
+            m_EdgeConnectorListener = new EdgeConnectorListener(m_Graph, m_SearchWindowProvider, editorWindow);
 
             foreach (var graphGroup in graph.groups)
             {
@@ -275,12 +285,15 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         void UpdateSubWindowsVisibility()
         {
-            m_MasterPreviewView.visible = m_UserViewSettings.isPreviewVisible;
-
             if (m_UserViewSettings.isBlackboardVisible)
-                m_BlackboardProvider.blackboard.style.display = DisplayStyle.Flex;
+                m_GraphView.Insert(m_GraphView.childCount, m_BlackboardProvider.blackboard);
             else
-                m_BlackboardProvider.blackboard.style.display = DisplayStyle.None;
+                m_BlackboardProvider.blackboard.RemoveFromHierarchy();
+
+            if (m_UserViewSettings.isPreviewVisible)
+                m_GraphView.Insert(m_GraphView.childCount, m_MasterPreviewView);
+            else
+                m_MasterPreviewView.RemoveFromHierarchy();
         }
 
         Action<Group, string> m_GraphViewGroupTitleChanged;
@@ -328,11 +341,19 @@ namespace UnityEditor.ShaderGraph.Drawing
                 }
             }
 
-            if (evt.ctrlKey && evt.keyCode == KeyCode.G)
+            if (evt.actionKey && evt.keyCode == KeyCode.G)
             {
-                if (m_GraphView.selection.OfType<MaterialNodeView>().Any())
+                if (m_GraphView.selection.OfType<GraphElement>().Any())
                 {
                     m_GraphView.GroupSelection();
+                }
+            }
+
+            if (evt.actionKey && evt.keyCode == KeyCode.U)
+            {
+                if (m_GraphView.selection.OfType<GraphElement>().Any())
+                {
+                    m_GraphView.RemoveFromGroupNode();
                 }
             }
         }
@@ -789,7 +810,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         void AddGroup(GroupData groupData)
         {
-            ShaderGroup graphGroup = new ShaderGroup(m_Graph);
+            ShaderGroup graphGroup = new ShaderGroup();
 
             graphGroup.userData = groupData;
             graphGroup.title = groupData.title;
@@ -1019,6 +1040,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             if (m_GraphView != null)
             {
                 saveRequested = null;
+                saveAsRequested = null;
                 convertToSubgraphRequested = null;
                 showInProjectRequested = null;
                 isCheckedOut = null;

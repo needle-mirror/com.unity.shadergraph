@@ -4,7 +4,7 @@
 
 A [Master Node](Master-Node.md) for physically based rendering. Can be used in either **Metallic** or **Specular** workflow modes as defined by the **Workflow** dropdown parameter.
 
-By default, Shader Graph expects the values you supply to the input **Normal** to be in tangent space. Use the [Transform Node](Transform-Node.md) to convert the values to tangent space, or use the **Fragment Normal Space** drop-down menu in the [Material Options](#material-options) to change the expected coordinate space to **Object** or **World**.
+By default, Shader Graph expects the values you supply to the input **Normal** to be in tangent space. Use the [Transform Node](Transform-Node.md) to convert the values to tangent space, or use the **Fragment Normal Space** drop-down menu in the [Material Options](#material-options) to change the expected coordinate space to **Object** or **World**. 
 
 ## Ports
 

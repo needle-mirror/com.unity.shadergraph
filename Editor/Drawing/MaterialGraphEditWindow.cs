@@ -62,6 +62,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 if (m_GraphEditorView != null)
                 {
                     m_GraphEditorView.saveRequested += UpdateAsset;
+                    m_GraphEditorView.saveAsRequested += SaveAs;
                     m_GraphEditorView.convertToSubgraphRequested += ToSubGraph;
                     m_GraphEditorView.showInProjectRequested += PingAsset;
                     m_GraphEditorView.isCheckedOut += IsGraphAssetCheckedOut;
@@ -87,7 +88,10 @@ namespace UnityEditor.ShaderGraph.Drawing
         public string selectedGuid
         {
             get { return m_Selected; }
-            private set { m_Selected = value; }
+            private set
+            {
+                m_Selected = value;
+            }
         }
 
         public string assetName
@@ -97,6 +101,14 @@ namespace UnityEditor.ShaderGraph.Drawing
             {
                 titleContent.text = value;
                 graphEditorView.assetName = value;
+            }
+        }
+
+        void DisplayChangedOnDiskDialog()
+        {
+            if (EditorUtility.DisplayDialog("Graph has changed on disk, do you want to reload?", AssetDatabase.GUIDToAssetPath(selectedGuid), "Reload", "Don't Reload"))
+            {
+                graphObject = null;
             }
         }
 
@@ -127,6 +139,12 @@ namespace UnityEditor.ShaderGraph.Drawing
                     titleContent = EditorGUIUtility.TrTextContentWithIcon(assetName, icon);
                     m_ProTheme = EditorGUIUtility.isProSkin;
                 }
+            }
+
+            if (m_PromptChangedOnDisk)
+            {
+                m_PromptChangedOnDisk = false;
+                DisplayChangedOnDiskDialog();
             }
 
             try
@@ -185,11 +203,19 @@ namespace UnityEditor.ShaderGraph.Drawing
                     m_ChangedFileDependencies.Clear();
                 }
 
-                if (graphObject.wasUndoRedoPerformed)
+                var wasUndoRedoPerformed = graphObject.wasUndoRedoPerformed;
+
+                if (wasUndoRedoPerformed)
                 {
                     graphEditorView.HandleGraphChanges();
                     graphObject.graph.ClearChanges();
                     graphObject.HandleUndoRedo();
+                }
+
+                if (graphObject.isDirty || wasUndoRedoPerformed)
+                {
+                    UpdateTitle();
+                    graphObject.isDirty = false;
                 }
 
                 graphEditorView.HandleGraphChanges();
@@ -224,12 +250,43 @@ namespace UnityEditor.ShaderGraph.Drawing
             messageManager.ClearAll();
         }
 
+        bool IsDirty()
+        {
+            var currentJson = EditorJsonUtility.ToJson(graphObject.graph, true);
+            var fileJson = File.ReadAllText(AssetDatabase.GUIDToAssetPath(selectedGuid));
+            return !string.Equals(currentJson, fileJson, StringComparison.Ordinal);
+        }
+
+        [SerializeField]
+        bool m_PromptChangedOnDisk;
+
+        public void CheckForChanges()
+        {
+            var isDirty = IsDirty();
+            if (isDirty)
+            {
+                m_PromptChangedOnDisk = true;
+            }
+            UpdateTitle(isDirty);
+        }
+
+        void UpdateTitle()
+        {
+            UpdateTitle(IsDirty());
+        }
+
+        void UpdateTitle(bool isDirty)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(selectedGuid));
+            titleContent.text = asset.name.Split('/').Last() + (isDirty ? "*" : "");
+        }
+
         void OnDestroy()
         {
             if (graphObject != null)
             {
                 string nameOfFile = AssetDatabase.GUIDToAssetPath(selectedGuid);
-                if (graphObject.isDirty && EditorUtility.DisplayDialog("Shader Graph Has Been Modified", "Do you want to save the changes you made in the Shader Graph?\n" + nameOfFile + "\n\nYour changes will be lost if you don't save them.", "Save", "Don't Save"))
+                if (IsDirty() && EditorUtility.DisplayDialog("Shader Graph Has Been Modified", "Do you want to save the changes you made in the Shader Graph?\n" + nameOfFile + "\n\nYour changes will be lost if you don't save them.", "Save", "Don't Save"))
                     UpdateAsset();
                 Undo.ClearUndo(graphObject);
                 graphObject = null;
@@ -282,6 +339,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                 if (string.IsNullOrEmpty(path) || graphObject == null)
                     return;
 
+                ShaderGraphAnalytics.SendShaderGraphEvent(selectedGuid, graphObject.graph);
+
                 var oldShader = AssetDatabase.LoadAssetAtPath<Shader>(path);
                 if (oldShader != null)
                     ShaderUtil.ClearShaderMessages(oldShader);
@@ -295,6 +354,45 @@ namespace UnityEditor.ShaderGraph.Drawing
                     {
                         GraphData.onSaveGraph(shader, (graphObject.graph.outputNode as MasterNode).saveContext);
                     }
+                }
+            }
+
+            UpdateTitle();
+        }
+
+        public void SaveAs()
+        {
+            if (selectedGuid != null && graphObject != null)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(selectedGuid);
+                if (string.IsNullOrEmpty(path) || graphObject == null)
+                    return;
+
+                var extension = graphObject.graph.isSubGraph ? ShaderSubGraphImporter.Extension : ShaderGraphImporter.Extension;
+                var newPath = EditorUtility.SaveFilePanel("Save Graph As", path, Path.GetFileNameWithoutExtension(path), extension);
+                newPath = newPath.Replace(Application.dataPath, "Assets");
+                if (newPath != path)
+                {
+                    if (!string.IsNullOrEmpty(newPath))
+                    {
+                        var success = FileUtilities.WriteShaderGraphToDisk(newPath, graphObject.graph);
+                        AssetDatabase.ImportAsset(newPath);
+                        if (success)
+                        {
+                            ShaderGraphImporterEditor.ShowGraphEditWindow(newPath);
+                            // This is for updating material dependencies so we exclude subgraphs here.
+                            if (GraphData.onSaveGraph != null && extension != ShaderSubGraphImporter.Extension)
+                            {
+                                var shader = AssetDatabase.LoadAssetAtPath<Shader>(newPath);
+                                // Retrieve graph context, note that if we're here the output node will always be a master node
+                                GraphData.onSaveGraph(shader, (graphObject.graph.outputNode as MasterNode).saveContext);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    UpdateAsset();
                 }
 
                 graphObject.isDirty = false;
@@ -682,7 +780,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                 Texture2D icon = GetThemeIcon(graphObject.graph);
 
                 // This is adding the icon at the front of the tab
-                titleContent = EditorGUIUtility.TrTextContentWithIcon(asset.name.Split('/').Last(), icon);
+                titleContent = EditorGUIUtility.TrTextContentWithIcon(selectedGuid, icon);
+                UpdateTitle();
 
                 Repaint();
             }
