@@ -1,6 +1,5 @@
 using System;
 using UnityEditor.ShaderGraph;
-using UnityEditor.ShaderGraph.Serialization;
 using UnityEngine;
 
 namespace UnityEditor.Graphing
@@ -47,7 +46,7 @@ namespace UnityEditor.Graphing
             set { m_IsDirty = value; }
         }
 
-        public virtual void RegisterCompleteObjectUndo(string actionName)
+        public void RegisterCompleteObjectUndo(string actionName)
         {
             Undo.RegisterCompleteObjectUndo(this, actionName);
             m_SerializedVersion++;
@@ -59,8 +58,7 @@ namespace UnityEditor.Graphing
         {
             if (graph != null)
             {
-                var json = MultiJson.Serialize(graph);
-                m_SerializedGraph = new SerializationHelper.JSONSerializedElement { JSONnodeData = json };
+                m_SerializedGraph = SerializationHelper.Serialize(graph);
                 m_IsSubGraph = graph.isSubGraph;
                 m_AssetGuid = graph.assetGuid;
             }
@@ -68,6 +66,10 @@ namespace UnityEditor.Graphing
 
         public void OnAfterDeserialize()
         {
+            if (graph == null)
+            {
+                graph = DeserializeGraph();
+            }
         }
 
         public bool wasUndoRedoPerformed => m_DeserializedVersion != m_SerializedVersion;
@@ -81,11 +83,11 @@ namespace UnityEditor.Graphing
 
         GraphData DeserializeGraph()
         {
-            var json = m_SerializedGraph.JSONnodeData;
-            var deserializedGraph = new GraphData {isSubGraph = m_IsSubGraph, assetGuid = m_AssetGuid};
-            MultiJson.Deserialize(deserializedGraph, json);
+            var deserializedGraph = SerializationHelper.Deserialize<GraphData>(m_SerializedGraph, GraphUtil.GetLegacyTypeRemapping());
+            deserializedGraph.isSubGraph = m_IsSubGraph;
+            deserializedGraph.assetGuid = m_AssetGuid;
             m_DeserializedVersion = m_SerializedVersion;
-            m_SerializedGraph = default;
+            m_SerializedGraph = default(SerializationHelper.JSONSerializedElement);
             return deserializedGraph;
         }
 
@@ -100,10 +102,6 @@ namespace UnityEditor.Graphing
 
         void OnEnable()
         {
-            if (graph == null && m_SerializedGraph.JSONnodeData != null)
-            {
-                graph = DeserializeGraph();
-            }
             Validate();
         }
 

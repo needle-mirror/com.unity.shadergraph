@@ -97,8 +97,7 @@ namespace UnityEditor.ShaderGraph
             {
                 displayName = displayName,
                 hidden = hidden,
-                value = value,
-                precision = precision
+                value = value
             };
         }
     }

@@ -9,7 +9,7 @@ namespace UnityEditor.ShaderGraph
 
     static class MayRequireDepthTextureExtensions
     {
-        public static bool RequiresDepthTexture(this MaterialSlot slot)
+        public static bool RequiresDepthTexture(this ISlot slot)
         {
             var mayRequireDepthTexture = slot as IMayRequireDepthTexture;
             return mayRequireDepthTexture != null && mayRequireDepthTexture.RequiresDepthTexture();

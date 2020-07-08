@@ -10,7 +10,7 @@ namespace UnityEditor.ShaderGraph
 
     static class MayRequireViewDirectionExtensions
     {
-        public static NeededCoordinateSpace RequiresViewDirection(this MaterialSlot slot)
+        public static NeededCoordinateSpace RequiresViewDirection(this ISlot slot)
         {
             var mayRequireViewDirection = slot as IMayRequireViewDirection;
             return mayRequireViewDirection != null ? mayRequireViewDirection.RequiresViewDirection() : NeededCoordinateSpace.None;

@@ -17,7 +17,6 @@ namespace UnityEditor.ShaderGraph
             var graph = new GraphData { isSubGraph = true };
             var outputNode = new SubGraphOutputNode();
             graph.AddNode(outputNode);
-            graph.outputNode = outputNode;
             outputNode.AddSlot(ConcreteSlotValueType.Vector4);
             graph.path = "Sub Graphs";
             FileUtilities.WriteShaderGraphToDisk(pathName, graph);

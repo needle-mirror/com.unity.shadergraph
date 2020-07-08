@@ -9,7 +9,7 @@ namespace UnityEditor.ShaderGraph
 
     static class IMayRequireFaceSignExtensions
     {
-        public static bool RequiresFaceSign(this MaterialSlot slot)
+        public static bool RequiresFaceSign(this ISlot slot)
         {
             var mayRequireFaceSign = slot as IMayRequireFaceSign;
             return mayRequireFaceSign != null && mayRequireFaceSign.RequiresFaceSign();

@@ -1,3 +1,5 @@
+using UnityEngine.UIElements;
+
 namespace UnityEditor.Graphing
 {
     interface ICanChangeShaderGUI

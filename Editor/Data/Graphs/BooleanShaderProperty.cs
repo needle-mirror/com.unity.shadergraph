@@ -46,8 +46,7 @@ namespace UnityEditor.ShaderGraph.Internal
             {
                 displayName = displayName,
                 hidden = hidden,
-                value = value,
-                precision = precision,
+                value = value
             };
         }
     }

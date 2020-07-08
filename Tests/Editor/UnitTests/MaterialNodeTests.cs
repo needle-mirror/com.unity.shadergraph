@@ -26,25 +26,21 @@ namespace UnityEditor.ShaderGraph.UnitTests
             }
         }
 
-        class NotAMaterialSlot : MaterialSlot
+        class NotAMaterialSlot : ISlot
         {
-            public override void AddDefaultProperty(PropertyCollector properties, GenerationMode generationMode)
+            public bool Equals(ISlot other)
             {
                 throw new NotImplementedException();
             }
 
-            public override void CopyValuesFrom(MaterialSlot foundSlot)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void CopyDefaultValue(MaterialSlot other)
-            {
-            }
-
-            public override SlotValueType valueType { get; }
-            public override ConcreteSlotValueType concreteValueType { get; }
-            public override bool isDefaultValue { get; }
+            public int id { get; }
+            public string displayName { get; set; }
+            public bool isInputSlot { get; }
+            public bool isOutputSlot { get; }
+            public int priority { get; set; }
+            public SlotReference slotReference { get; }
+            public AbstractMaterialNode owner { get; set; }
+            public bool hidden { get; set; }
         }
 
         [OneTimeSetUp]
@@ -59,13 +55,18 @@ namespace UnityEditor.ShaderGraph.UnitTests
             m_Graph = new GraphData();
             m_NodeA = new TestNode();
             m_Graph.AddNode(m_NodeA);
-            m_NodeA.SetOverrideActiveState(AbstractMaterialNode.ActiveState.ExplicitActive);
         }
 
         [Test]
         public void GetVariableNameForSlotThrowsWhenInvalid()
         {
             Assert.Throws<ArgumentException>(() => m_NodeA.GetVariableNameForSlot(666));
+        }
+
+        [Test]
+        public void AddingNonMaterialSlotToNodeThrows()
+        {
+            Assert.Throws<ArgumentException>(() => m_NodeA.AddSlot(new NotAMaterialSlot()));
         }
 
         [Test]

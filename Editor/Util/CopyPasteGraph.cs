@@ -1,203 +1,222 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor.Graphing;
 using UnityEngine;
 using UnityEditor.ShaderGraph;
 using UnityEditor.ShaderGraph.Internal;
-using UnityEditor.ShaderGraph.Serialization;
 
-namespace UnityEditor.ShaderGraph
+namespace UnityEditor.Graphing.Util
 {
     [Serializable]
-    sealed class CopyPasteGraph : JsonObject
+    sealed class CopyPasteGraph : ISerializationCallbackReceiver
     {
-        [SerializeField]
-        List<Edge> m_Edges = new List<Edge>();
+        [NonSerialized]
+        HashSet<IEdge> m_Edges = new HashSet<IEdge>();
+
+        [NonSerialized]
+        HashSet<AbstractMaterialNode> m_Nodes = new HashSet<AbstractMaterialNode>();
 
         [SerializeField]
-        List<JsonData<AbstractMaterialNode>> m_Nodes = new List<JsonData<AbstractMaterialNode>>();
+        List<GroupData> m_Groups = new List<GroupData>();
 
         [SerializeField]
-        List<JsonData<GroupData>> m_Groups = new List<JsonData<GroupData>>();
+        List<StickyNoteData> m_StickyNotes = new List<StickyNoteData>();
 
-        [SerializeField]
-        List<JsonData<StickyNoteData>> m_StickyNotes = new List<JsonData<StickyNoteData>>();
-
-        [SerializeField]
-        List<JsonRef<ShaderInput>> m_Inputs = new List<JsonRef<ShaderInput>>();
+        [NonSerialized]
+        HashSet<ShaderInput> m_Inputs = new HashSet<ShaderInput>();
 
         // The meta properties are properties that are not copied into the target graph
         // but sent along to allow property nodes to still hvae the data from the original
         // property present.
-        [SerializeField]
-        List<JsonData<AbstractShaderProperty>> m_MetaProperties = new List<JsonData<AbstractShaderProperty>>();
-
-        [SerializeField]
-        List<string> m_MetaPropertyIds = new List<string>();
+        [NonSerialized]
+        HashSet<AbstractShaderProperty> m_MetaProperties = new HashSet<AbstractShaderProperty>();
 
         // The meta keywords are keywords that are required by keyword nodes
         // These are copied into the target graph when there is no collision
-        [SerializeField]
-        List<JsonData<ShaderKeyword>> m_MetaKeywords = new List<JsonData<ShaderKeyword>>();
+        [NonSerialized]
+        HashSet<ShaderKeyword> m_MetaKeywords = new HashSet<ShaderKeyword>();
 
         [SerializeField]
-        List<string> m_MetaKeywordIds = new List<string>();
+        string m_SourceGraphGuid;
+
+        [SerializeField]
+        List<SerializationHelper.JSONSerializedElement> m_SerializableNodes = new List<SerializationHelper.JSONSerializedElement>();
+
+        [SerializeField]
+        List<SerializationHelper.JSONSerializedElement> m_SerializableEdges = new List<SerializationHelper.JSONSerializedElement>();
+
+        [SerializeField]
+        List<SerializationHelper.JSONSerializedElement> m_SerilaizeableInputs = new List<SerializationHelper.JSONSerializedElement>();
+
+        [SerializeField]
+        List<SerializationHelper.JSONSerializedElement> m_SerializableMetaProperties = new List<SerializationHelper.JSONSerializedElement>();
+
+        [SerializeField]
+        List<SerializationHelper.JSONSerializedElement> m_SerializableMetaKeywords = new List<SerializationHelper.JSONSerializedElement>();
 
         public CopyPasteGraph() {}
 
-        public CopyPasteGraph(IEnumerable<GroupData> groups, IEnumerable<AbstractMaterialNode> nodes, IEnumerable<Edge> edges,
-            IEnumerable<ShaderInput> inputs, IEnumerable<AbstractShaderProperty> metaProperties, IEnumerable<ShaderKeyword> metaKeywords, IEnumerable<StickyNoteData> notes, bool keepOutputEdges = false)
+        public CopyPasteGraph(string sourceGraphGuid, IEnumerable<GroupData> groups, IEnumerable<AbstractMaterialNode> nodes, IEnumerable<IEdge> edges, IEnumerable<ShaderInput> inputs, IEnumerable<AbstractShaderProperty> metaProperties, IEnumerable<ShaderKeyword> metaKeywords, IEnumerable<StickyNoteData> notes)
         {
-            if (groups != null)
+            m_SourceGraphGuid = sourceGraphGuid;
+
+            foreach (var groupData in groups)
             {
-                foreach (var groupData in groups)
-                    AddGroup(groupData);
+                AddGroup(groupData);
             }
 
-            if (notes != null)
+            foreach (var stickyNote in notes)
             {
-                foreach (var stickyNote in notes)
-                    AddNote(stickyNote);
+                AddNote(stickyNote);
             }
 
-            var nodeSet = new HashSet<AbstractMaterialNode>();
-
-            if (nodes != null)
+            foreach (var node in nodes)
             {
-                foreach (var node in nodes.Distinct())
+                if (!node.canCopyNode)
                 {
-                    if (!node.canCopyNode)
-                    {
-                        throw new InvalidOperationException($"Cannot copy node {node.name} ({node.objectId}).");
-                    }
-
-                    nodeSet.Add(node);
-                    AddNode(node);
-                    foreach (var edge in NodeUtils.GetAllEdges(node))
-                        AddEdge((Edge)edge);
+                    throw new InvalidOperationException($"Cannot copy node {node.name} ({node.guid}).");
                 }
-            }
-
-            if (edges != null)
-            {
-                foreach (var edge in edges)
+                AddNode(node);
+                foreach (var edge in NodeUtils.GetAllEdges(node))
                     AddEdge(edge);
             }
 
-            if (inputs != null)
-            {
-                foreach (var input in inputs)
-                    AddInput(input);
-            }
+            foreach (var edge in edges)
+                AddEdge(edge);
 
-            if (metaProperties != null)
-            {
-                foreach (var metaProperty in metaProperties.Distinct())
-                    AddMetaProperty(metaProperty);
-            }
+            foreach (var input in inputs)
+                AddInput(input);
 
-            if (metaKeywords != null)
-            {
-                foreach (var metaKeyword in metaKeywords.Distinct())
-                    AddMetaKeyword(metaKeyword);
-            }
+            foreach (var metaProperty in metaProperties)
+                AddMetaProperty(metaProperty);
 
-            m_Edges = m_Edges
-                .Distinct()
-                .Where(edge => nodeSet.Contains(edge.inputSlot.node) || (keepOutputEdges && nodeSet.Contains(edge.outputSlot.node)))
-                .ToList();
+            foreach (var metaKeyword in metaKeywords)
+                AddMetaKeyword(metaKeyword);
         }
 
-        void AddGroup(GroupData group)
+        public void AddGroup(GroupData group)
         {
             m_Groups.Add(group);
         }
 
-        void AddNote(StickyNoteData stickyNote)
+        public void AddNote(StickyNoteData stickyNote)
         {
             m_StickyNotes.Add(stickyNote);
         }
 
-        void AddNode(AbstractMaterialNode node)
+        public void AddNode(AbstractMaterialNode node)
         {
             m_Nodes.Add(node);
         }
 
-        void AddEdge(Edge edge)
+        public void AddEdge(IEdge edge)
         {
             m_Edges.Add(edge);
         }
 
-        void AddInput(ShaderInput input)
+        public void AddInput(ShaderInput input)
         {
             m_Inputs.Add(input);
         }
 
-        void AddMetaProperty(AbstractShaderProperty metaProperty)
+        public void AddMetaProperty(AbstractShaderProperty metaProperty)
         {
             m_MetaProperties.Add(metaProperty);
-            m_MetaPropertyIds.Add(metaProperty.objectId);
         }
 
-        void AddMetaKeyword(ShaderKeyword metaKeyword)
+        public void AddMetaKeyword(ShaderKeyword metaKeyword)
         {
             m_MetaKeywords.Add(metaKeyword);
-            m_MetaKeywordIds.Add(metaKeyword.objectId);
         }
 
         public IEnumerable<T> GetNodes<T>()
         {
-            return m_Nodes.SelectValue().OfType<T>();
+            return m_Nodes.OfType<T>();
         }
 
-        public DataValueEnumerable<GroupData> groups => m_Groups.SelectValue();
+        public IEnumerable<GroupData> groups
+        {
+            get { return m_Groups; }
+        }
 
-        public DataValueEnumerable<StickyNoteData> stickyNotes => m_StickyNotes.SelectValue();
+        public IEnumerable<StickyNoteData> stickyNotes => m_StickyNotes;
 
-        public IEnumerable<Edge> edges
+        public IEnumerable<IEdge> edges
         {
             get { return m_Edges; }
         }
 
-        public RefValueEnumerable<ShaderInput> inputs
+        public IEnumerable<ShaderInput> inputs
         {
-            get { return m_Inputs.SelectValue(); }
+            get { return m_Inputs; }
         }
 
-        public DataValueEnumerable<AbstractShaderProperty> metaProperties
+        public IEnumerable<AbstractShaderProperty> metaProperties
         {
-            get { return m_MetaProperties.SelectValue(); }
+            get { return m_MetaProperties; }
         }
 
-        public DataValueEnumerable<ShaderKeyword> metaKeywords
+        public IEnumerable<ShaderKeyword> metaKeywords
         {
-            get { return m_MetaKeywords.SelectValue(); }
+            get { return m_MetaKeywords; }
         }
 
-        public IEnumerable<string> metaPropertyIds => m_MetaPropertyIds;
-
-        public IEnumerable<string> metaKeywordIds => m_MetaKeywordIds;
-
-        public override void OnAfterMultiDeserialize(string json)
+        public string sourceGraphGuid
         {
-            // should we add support for versioning old CopyPasteGraphs from old versions of Unity?
-            // so you can copy from old paste to new
+            get { return m_SourceGraphGuid; }
+        }
 
-            foreach (var node in m_Nodes.SelectValue())
+        public void OnBeforeSerialize()
+        {
+            m_SerializableNodes = SerializationHelper.Serialize<AbstractMaterialNode>(m_Nodes);
+            m_SerializableEdges = SerializationHelper.Serialize<IEdge>(m_Edges);
+            m_SerilaizeableInputs = SerializationHelper.Serialize<ShaderInput>(m_Inputs);
+            m_SerializableMetaProperties = SerializationHelper.Serialize<AbstractShaderProperty>(m_MetaProperties);
+            m_SerializableMetaKeywords = SerializationHelper.Serialize<ShaderKeyword>(m_MetaKeywords);
+        }
+
+        public void OnAfterDeserialize()
+        {
+            var nodes = SerializationHelper.Deserialize<AbstractMaterialNode>(m_SerializableNodes, GraphUtil.GetLegacyTypeRemapping());
+            m_Nodes.Clear();
+            foreach (var node in nodes)
+                m_Nodes.Add(node);
+            m_SerializableNodes = null;
+
+            var edges = SerializationHelper.Deserialize<IEdge>(m_SerializableEdges, GraphUtil.GetLegacyTypeRemapping());
+            m_Edges.Clear();
+            foreach (var edge in edges)
+                m_Edges.Add(edge);
+            m_SerializableEdges = null;
+
+            var inputs = SerializationHelper.Deserialize<ShaderInput>(m_SerilaizeableInputs, GraphUtil.GetLegacyTypeRemapping());
+            m_Inputs.Clear();
+            foreach (var input in inputs)
+                m_Inputs.Add(input);
+            m_SerilaizeableInputs = null;
+
+            var metaProperties = SerializationHelper.Deserialize<AbstractShaderProperty>(m_SerializableMetaProperties, GraphUtil.GetLegacyTypeRemapping());
+            m_MetaProperties.Clear();
+            foreach (var metaProperty in metaProperties)
             {
-                node.UpdateNodeAfterDeserialization();
-                node.SetupSlots();
+                m_MetaProperties.Add(metaProperty);
             }
+            m_SerializableMetaProperties = null;
+
+            var metaKeywords = SerializationHelper.Deserialize<ShaderKeyword>(m_SerializableMetaKeywords, GraphUtil.GetLegacyTypeRemapping());
+            m_MetaKeywords.Clear();
+            foreach (var metaKeyword in metaKeywords)
+            {
+                m_MetaKeywords.Add(metaKeyword);
+            }
+            m_SerializableMetaKeywords = null;
         }
 
-        internal static CopyPasteGraph FromJson(string copyBuffer, GraphData targetGraph)
+        internal static CopyPasteGraph FromJson(string copyBuffer)
         {
             try
             {
-                var graph = new CopyPasteGraph();
-                MultiJson.Deserialize(graph, copyBuffer, targetGraph, true);
-                return graph;
+                return JsonUtility.FromJson<CopyPasteGraph>(copyBuffer);
             }
             catch
             {

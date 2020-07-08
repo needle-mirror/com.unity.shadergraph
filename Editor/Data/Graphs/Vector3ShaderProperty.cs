@@ -39,9 +39,7 @@ namespace UnityEditor.ShaderGraph.Internal
             {
                 displayName = displayName,
                 hidden = hidden,
-                value = value,
-                precision = precision,
-                gpuInstanced = gpuInstanced,
+                value = value
             };
         }
     }

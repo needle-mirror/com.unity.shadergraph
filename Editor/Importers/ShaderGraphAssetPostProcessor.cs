@@ -60,13 +60,13 @@ namespace UnityEditor.ShaderGraph
         {
             RegisterShaders(importedAssets);
 
-            // Moved assets
+            //Moved Assets
             bool anyMovedShaders = movedAssets.Any(val => val.EndsWith(ShaderGraphImporter.Extension, StringComparison.InvariantCultureIgnoreCase));
             anyMovedShaders |= movedAssets.Any(val => val.EndsWith(ShaderSubGraphImporter.Extension, StringComparison.InvariantCultureIgnoreCase));
             if (anyMovedShaders)
                 UpdateAfterAssetChange(movedAssets);
 
-            // Deleted assets
+            //Deleted Assets
             bool anyRemovedShaders = deletedAssets.Any(val => val.EndsWith(ShaderGraphImporter.Extension, StringComparison.InvariantCultureIgnoreCase));
             anyRemovedShaders |= deletedAssets.Any(val => val.EndsWith(ShaderSubGraphImporter.Extension, StringComparison.InvariantCultureIgnoreCase));
             if (anyRemovedShaders)

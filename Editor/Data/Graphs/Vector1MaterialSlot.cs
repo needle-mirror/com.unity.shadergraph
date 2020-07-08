@@ -48,8 +48,6 @@ namespace UnityEditor.ShaderGraph
             set { m_Value = value; }
         }
 
-        public override bool isDefaultValue => value.Equals(defaultValue);
-
         public override VisualElement InstantiateControl()
         {
             return new MultiFloatSlotControlView(owner, m_Labels, () => new Vector4(value, 0f, 0f, 0f), (newValue) => value = newValue.x);
@@ -96,14 +94,6 @@ namespace UnityEditor.ShaderGraph
             var slot = foundSlot as Vector1MaterialSlot;
             if (slot != null)
                 value = slot.value;
-        }
-        public override void CopyDefaultValue(MaterialSlot other)
-        {
-            base.CopyDefaultValue(other);
-            if (other is IMaterialSlotHasValue<float> ms)
-            {
-                m_DefaultValue = ms.defaultValue;
-            }
         }
     }
 }

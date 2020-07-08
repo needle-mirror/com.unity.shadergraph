@@ -24,8 +24,6 @@ namespace UnityEditor.ShaderGraph
             public Cubemap cubemapValue;
             [FieldOffset(0)]
             public Gradient gradientValue;
-            [FieldOffset(0)]
-            public VirtualTextureShaderProperty vtProperty;
         }
 
         [StructLayout(LayoutKind.Explicit)]
@@ -111,22 +109,6 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
-        public VirtualTextureShaderProperty vtProperty
-        {
-            get
-            {
-                if (propType != PropertyType.VirtualTexture)
-                    throw new ArgumentException(string.Format(k_GetErrorMessage, PropertyType.Gradient, propType));
-                return m_ClassData.vtProperty;
-            }
-            set
-            {
-                if (propType != PropertyType.VirtualTexture)
-                    throw new ArgumentException(string.Format(k_SetErrorMessage, PropertyType.Gradient, propType));
-                m_ClassData.vtProperty = value;
-            }
-        }
-
         public Vector4 vector4Value
         {
             get
@@ -195,7 +177,7 @@ namespace UnityEditor.ShaderGraph
         const string k_SetErrorMessage = "Cannot set a {0} property on a PreviewProperty with type {1}.";
         const string k_GetErrorMessage = "Cannot get a {0} property on a PreviewProperty with type {1}.";
 
-        public void SetValueOnMaterialPropertyBlock(MaterialPropertyBlock mat)
+        public void SetMaterialPropertyBlockValue(Material mat)
         {
             if ((propType == PropertyType.Texture2D || propType == PropertyType.Texture2DArray || propType == PropertyType.Texture3D) && textureValue != null)
                 mat.SetTexture(name, m_ClassData.textureValue);
@@ -221,10 +203,14 @@ namespace UnityEditor.ShaderGraph
                 for (int i = 0; i < 8; i++)
                     mat.SetVector(string.Format("{0}_AlphaKey{1}", name, i), i < m_ClassData.gradientValue.alphaKeys.Length ? GradientUtil.AlphaKeyToVector(m_ClassData.gradientValue.alphaKeys[i]) : Vector2.zero);
             }
-            else if (propType == PropertyType.VirtualTexture)
-            {
-                // virtual texture assignments are not supported via the material property block, we must assign them to the materials
-            }
+        }
+    }
+
+    static class PreviewPropertyExtensions
+    {
+        public static void SetPreviewProperty(this Material mat, PreviewProperty previewProperty)
+        {
+            previewProperty.SetMaterialPropertyBlockValue(mat);
         }
     }
 }

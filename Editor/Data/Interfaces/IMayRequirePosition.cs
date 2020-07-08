@@ -10,7 +10,7 @@ namespace UnityEditor.ShaderGraph
 
     static class MayRequirePositionExtensions
     {
-        public static NeededCoordinateSpace RequiresPosition(this MaterialSlot slot)
+        public static NeededCoordinateSpace RequiresPosition(this ISlot slot)
         {
             var mayRequirePosition = slot as IMayRequirePosition;
             return mayRequirePosition != null ? mayRequirePosition.RequiresPosition() : NeededCoordinateSpace.None;

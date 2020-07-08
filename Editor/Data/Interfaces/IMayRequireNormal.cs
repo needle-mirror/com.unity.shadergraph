@@ -10,7 +10,7 @@ namespace UnityEditor.ShaderGraph
 
     static class MayRequireNormalExtensions
     {
-        public static NeededCoordinateSpace RequiresNormal(this MaterialSlot slot)
+        public static NeededCoordinateSpace RequiresNormal(this ISlot slot)
         {
             var mayRequireNormal = slot as IMayRequireNormal;
             return mayRequireNormal != null ? mayRequireNormal.RequiresNormal() : NeededCoordinateSpace.None;

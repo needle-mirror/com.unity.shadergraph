@@ -4,6 +4,6 @@ namespace UnityEditor.ShaderGraph
 {
     interface IGroupItem
     {
-        GroupData group { get; set; }
+        Guid groupGuid { get; set; }
     }
 }

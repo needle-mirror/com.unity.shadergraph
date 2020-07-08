@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using UnityEditor.Graphing;
 using UnityEngine;
 using System.Linq;
-using UnityEditor.Graphing.Util;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -34,7 +33,10 @@ namespace UnityEditor.ShaderGraph
 
         MultiplyType m_MultiplyType;
 
-        public override bool hasPreview => true;
+        public override bool hasPreview
+        {
+            get { return m_MultiplyType != MultiplyType.Matrix; }
+        }
 
         string GetFunctionHeader()
         {
@@ -93,8 +95,10 @@ namespace UnityEditor.ShaderGraph
         // Internal validation
         // -------------------------------------------------
 
-        public override void EvaluateDynamicMaterialSlots()
+        public override void ValidateNode()
         {
+            var isInError = false;
+            var errorMessage = k_validationErrorMessage;
 
             var dynamicInputSlotsToCompare = DictionaryPool<DynamicValueMaterialSlot, ConcreteSlotValueType>.Get();
             var skippedDynamicSlots = ListPool<DynamicValueMaterialSlot>.Get();
@@ -118,7 +122,7 @@ namespace UnityEditor.ShaderGraph
 
                     // get the output details
                     var outputSlotRef = edges[0].outputSlot;
-                    var outputNode = outputSlotRef.node;
+                    var outputNode = owner.GetNodeFromGuid(outputSlotRef.nodeGuid);
                     if (outputNode == null)
                         continue;
 
@@ -189,12 +193,8 @@ namespace UnityEditor.ShaderGraph
 
                 tempSlots.Clear();
                 GetInputSlots(tempSlots);
-                bool inputError = tempSlots.Any(x => x.hasError);
-                if (inputError)
-                {
-                    owner.AddConcretizationError(objectId, string.Format("Node {0} had input error", objectId));
-                    hasError = true;
-                }
+                var inputError = tempSlots.Any(x => x.hasError);
+
                 // configure the output slots now
                 // their slotType will either be the default output slotType
                 // or the above dynanic slotType for dynamic nodes
@@ -239,16 +239,24 @@ namespace UnityEditor.ShaderGraph
                     }
                 }
 
+                isInError |= inputError;
                 tempSlots.Clear();
                 GetOutputSlots(tempSlots);
-                if(tempSlots.Any(x => x.hasError))
-                {
-                    owner.AddConcretizationError(objectId, string.Format("Node {0} had output error", objectId));
-                    hasError = true;
-                }
+                isInError |= tempSlots.Any(x => x.hasError);
             }
 
-            CalculateNodeHasError();
+            isInError |= CalculateNodeHasError(ref errorMessage);
+            isInError |= ValidateConcretePrecision(ref errorMessage);
+            hasError = isInError;
+
+            if (isInError)
+            {
+                ((GraphData) owner).AddValidationError(tempId, errorMessage);
+            }
+            else
+            {
+                ++version;
+            }
 
             ListPool<DynamicValueMaterialSlot>.Release(skippedDynamicSlots);
             DictionaryPool<DynamicValueMaterialSlot, ConcreteSlotValueType>.Release(dynamicInputSlotsToCompare);
@@ -294,7 +302,7 @@ namespace UnityEditor.ShaderGraph
                 var edges = owner.GetEdges(slots[i].slotReference).ToList();
                 if (!edges.Any())
                     continue;
-                var outputNode = edges[0].outputSlot.node;
+                var outputNode = owner.GetNodeFromGuid(edges[0].outputSlot.nodeGuid);
                 var outputSlot = outputNode.FindOutputSlot<MaterialSlot>(edges[0].outputSlot.slotId);
                 if (outputSlot.concreteValueType == ConcreteSlotValueType.Matrix4
                     || outputSlot.concreteValueType == ConcreteSlotValueType.Matrix3
@@ -309,7 +317,7 @@ namespace UnityEditor.ShaderGraph
             var edges = owner.GetEdges(slot.slotReference).ToList();
             if (!edges.Any())
                 return;
-            var outputNode = edges[0].outputSlot.node;
+            var outputNode = owner.GetNodeFromGuid(edges[0].outputSlot.nodeGuid);
             var outputSlot = outputNode.FindOutputSlot<MaterialSlot>(edges[0].outputSlot.slotId);
             slot.SetConcreteType(outputSlot.concreteValueType);
         }

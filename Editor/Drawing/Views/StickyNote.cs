@@ -15,6 +15,15 @@ namespace UnityEditor.ShaderGraph.Drawing
     {}
     class ElementResizer : Manipulator
     {
+//        static MethodInfo m_ValidateLayoutMethod;
+//        public static void InternalValidateLayout(IPanel panel)
+//        {
+//            if (m_ValidateLayoutMethod == null)
+//                m_ValidateLayoutMethod = panel.GetType().GetMethod("ValidateLayout", BindingFlags.Instance | BindingFlags.FlattenHierarchy | BindingFlags.NonPublic | BindingFlags.Public);
+//
+//            m_ValidateLayoutMethod.Invoke(panel, new object[] {});
+//        }
+
         public readonly ResizableElement.Resizer direction;
 
         public readonly VisualElement resizedElement;
@@ -117,8 +126,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
             if ((direction & ResizableElement.Resizer.Bottom) != 0)
             {
-                var delta = mousePos.y - m_StartMouse.y;
-                resizedTarget.style.height = Mathf.Clamp(m_StartSize.y + delta, m_MinSize.y, m_MaxSize.y);
+                resizedTarget.style.height = Mathf.Min(m_MaxSize.y, Mathf.Max(m_MinSize.y, m_StartSize.y + mousePos.y - m_StartMouse.y));
             }
             else if ((direction & ResizableElement.Resizer.Top) != 0)
             {
@@ -156,13 +164,8 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
         }
     }
-
-      class ResizableElement : VisualElement
+    class ResizableElement : VisualElement
     {
-        Dictionary<Resizer, VisualElement> m_Resizers = new Dictionary<Resizer, VisualElement>();
-
-        List<Manipulator> m_Manipulators = new List<Manipulator>();
-
         public ResizableElement() : this("uxml/Resizable")
         {
             pickingMode = PickingMode.Ignore;
@@ -180,11 +183,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             {
                 VisualElement resizer = this.Q(value.ToString().ToLower() + "-resize");
                 if (resizer != null)
-                {
-                    var manipulator = new ElementResizer(this, value);
-                    resizer.AddManipulator(manipulator);
-                    m_Manipulators.Add(manipulator);
-                }
+                    resizer.AddManipulator(new ElementResizer(this, value));
                 m_Resizers[value] = resizer;
             }
 
@@ -193,11 +192,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 {
                     VisualElement resizer = this.Q(vertical.ToString().ToLower() + "-" + horizontal.ToString().ToLower() + "-resize");
                     if (resizer != null)
-                    {
-                        var manipulator = new ElementResizer(this, vertical | horizontal);
-                        resizer.AddManipulator(manipulator);
-                        m_Manipulators.Add(manipulator);
-                    }
+                        resizer.AddManipulator(new ElementResizer(this, vertical | horizontal));
                     m_Resizers[vertical | horizontal] = resizer;
                 }
         }
@@ -210,17 +205,9 @@ namespace UnityEditor.ShaderGraph.Drawing
             Right =         1 << 3,
         }
 
-        // Lets visual element owners bind a callback to when any resize operation is completed
-        public void BindOnResizeCallback(EventCallback<MouseUpEvent> mouseUpEvent)
-        {
-            foreach (var manipulator in m_Manipulators)
-            {
-                if (manipulator == null)
-                    return;
-                manipulator.target.RegisterCallback(mouseUpEvent);
-            }
-        }
+        Dictionary<Resizer, VisualElement> m_Resizers = new Dictionary<Resizer, VisualElement>();
     }
+
 
     class StickyNodeChangeEvent : EventBase<StickyNodeChangeEvent>
     {
@@ -410,8 +397,6 @@ namespace UnityEditor.ShaderGraph.Drawing
             RegisterCallback<AttachToPanelEvent>(OnAttachToPanel);
         }
 
-        public string displayName => $"{m_Title.text} (Sticky Note)";
-
         public StickyNote(string uiFile, Rect position, GraphData graph)
         {
             m_Graph = graph;
@@ -496,12 +481,6 @@ namespace UnityEditor.ShaderGraph.Drawing
             //m_Graph.owner.RegisterCompleteObjectUndo("Title Changed");
             //title = m_TitleField.value;
             //userData.title = title;
-        }
-
-        public PropertySheet GetInspectorContent()
-        {
-            var sheet = new PropertySheet();
-            return sheet;
         }
 
         const string fitTextClass = "fit-text";
