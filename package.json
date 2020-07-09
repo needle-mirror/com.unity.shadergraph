@@ -1,12 +1,12 @@
 {
   "name": "com.unity.shadergraph",
   "description": "The Shader Graph package adds a visual Shader editing tool to Unity. You can use this tool to create Shaders in a visual way instead of writing code. Specific render pipelines can implement specific graph features. Currently, both the High Definition Rendering Pipeline and the Universal Rendering Pipeline support Shader Graph.",
-  "version": "9.0.0-preview.34",
+  "version": "9.0.0-preview.55",
   "unity": "2020.1",
   "unityRelease": "0b13",
   "displayName": "Shader Graph",
   "dependencies": {
-    "com.unity.render-pipelines.core": "9.0.0-preview.38",
+    "com.unity.render-pipelines.core": "9.0.0-preview.60",
     "com.unity.searcher": "4.2.0"
   },
   "samples": [
@@ -17,11 +17,11 @@
     }
   ],
   "upmCi": {
-    "footprint": "82ffd5a47750545f1fefb0442a5ae23b5799a5ce"
+    "footprint": "bb97da2d40143d5922688e2189b3b9987583581a"
   },
   "repository": {
     "url": "https://github.com/Unity-Technologies/Graphics.git",
     "type": "git",
-    "revision": "4f2419e11b7e8c1ca6517d4b1fcc5769d6f1fc04"
+    "revision": "30727520cc865410e149433fbd815e8f9d18f413"
   }
 }
