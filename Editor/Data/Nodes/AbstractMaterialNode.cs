@@ -20,9 +20,6 @@ namespace UnityEditor.ShaderGraph
         private string m_Name;
 
         [SerializeField]
-        private int m_NodeVersion;
-
-        [SerializeField]
         private DrawState m_DrawState;
 
         [NonSerialized]
@@ -309,8 +306,6 @@ namespace UnityEditor.ShaderGraph
         protected AbstractMaterialNode()
         {
             m_DrawState.expanded = true;
-            m_NodeVersion = GetCompiledNodeVersion();
-            version = 0;
         }
 
         public void GetInputSlots<T>(List<T> foundSlots) where T : MaterialSlot
@@ -382,8 +377,11 @@ namespace UnityEditor.ShaderGraph
 
         public AbstractShaderProperty GetSlotProperty(int inputSlotId)
         {
+            if (owner == null)
+                return null;
+
             var inputSlot = FindSlot<MaterialSlot>(inputSlotId);
-            if (inputSlot == null)
+            if (inputSlot?.slotReference.node == null)
                 return null;
 
             var edges = owner.GetEdges(inputSlot.slotReference);
@@ -672,10 +670,6 @@ namespace UnityEditor.ShaderGraph
             owner?.ClearErrorsForNode(this);
             EvaluateConcretePrecision();
             EvaluateDynamicMaterialSlots();
-            if(!hasError)
-            {
-                ++version;
-            }
         }
 
         public virtual void ValidateNode()
@@ -683,7 +677,6 @@ namespace UnityEditor.ShaderGraph
 
         }
 
-        public int version { get; set; }
         public virtual bool canCutNode => true;
         public virtual bool canCopyNode => true;
 
@@ -858,19 +851,6 @@ namespace UnityEditor.ShaderGraph
             return this.GetInputSlots<MaterialSlot>().Where(x => !owner.GetEdges(GetSlotReference(x.id)).Any());
         }
 
-        public override void OnAfterMultiDeserialize(string json)
-        {
-            if (m_NodeVersion != GetCompiledNodeVersion())
-            {
-                UpgradeNodeWithVersion(m_NodeVersion, GetCompiledNodeVersion());
-                m_NodeVersion = GetCompiledNodeVersion();
-            }
-
-
-
-            // UpdateNodeAfterDeserialization();
-        }
-
         public void SetupSlots()
         {
             foreach (var s in m_Slots.SelectValue())
@@ -878,11 +858,6 @@ namespace UnityEditor.ShaderGraph
         }
 
         public virtual void UpdateNodeAfterDeserialization()
-        {}
-
-        public virtual int GetCompiledNodeVersion() => 0;
-
-        public virtual void UpgradeNodeWithVersion(int from, int to)
         {}
 
         public bool IsSlotConnected(int slotId)

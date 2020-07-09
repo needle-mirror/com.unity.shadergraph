@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `Compute Deformation` Node to read deformed vertex data from Dots Deformations.
 - Added new graph nodes that allow sampling Virtual Textures
 - Shader Graph now uses a new file format that is much friendlier towards version control systems and humans. Existing Shader Graphs and will use the new format next time they are saved.
+- Added ability for Shader Graph to change node behavior without impacting existing graphs via the “Allow Deprecated Nodes”
 
 ### Changed
 - Changed the `Branch` node so that it uses a ternary operator (`Out = bool ? a : B`) instead of a linear interpolate function.
@@ -127,10 +128,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Disallow Save As and Convert to Subgraph that would create recursive dependencies
 - Alpha Clipping option in Graph inspector now correctly hides and indents dependent options. (https://fogbugz.unity3d.com/f/cases/1257041/)
 - Fixed a bug where the object selector for Custom Function Nodes did not update correctly. [1176129](https://issuetracker.unity3d.com/product/unity/issues/guid/1176129/)
+- Fixed a bug where changing the name of a property did not update nodes on the graph. [1249164](https://issuetracker.unity3d.com/product/unity/issues/guid/1249164/)
 - Fixed a bug where the Main Preview window was no longer a square aspect ratio. [1257053](https://issuetracker.unity3d.com/product/unity/issues/guid/1257053/)
 - Fixed a bug where the size of the Graph Inspector would not save properly. [1257084](https://issuetracker.unity3d.com/product/unity/issues/guid/1257084/)
 - Fixed a bug where the Create Node menu would override the Object Field selection window. [1176125](https://issuetracker.unity3d.com/issues/shader-graph-object-input-field-with-space-bar-shortcut-opens-shader-graph-search-window-and-object-select-window)
 - Fixed a bug where whitespaces were allowed in keyword reference names
+- Fixed a crash issue when ShaderGraph included in a project along with DOTS assemblies
+- Added missing SampleVirtualTextureNode address mode control in ShaderGraph
+- Fixed a badly named control on SampleVirtualTextureNode in ShaderGraph
+- Fixed an issue where multiple SampleVirtualTextureNodes created functions with names that may collide in ShaderGraph
+- Fixed a bug where the SampleVirtualTexture node would delete slots when changing its LOD mode [1268483]
+- Fixed an issue where building a context menu on a dragging block node would leave it floating and undo/redo would result in a soft-lock
+- Fixed an issue with the SampleVirtualTexture node in ShaderGraph, where toggling Automatic Streaming would cause the node to incorrectly display four output slots [1271618]
+- Fixed some bugs with Color Nodes and properties that would cause incorrect collorspace conversions
 
 ## [7.1.1] - 2019-09-05
 ### Added
