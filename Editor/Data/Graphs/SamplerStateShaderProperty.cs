@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace UnityEditor.ShaderGraph
 {
+    [BlackboardInputInfo(80)]
     class SamplerStateShaderProperty : AbstractShaderProperty<TextureSamplerState>
     {
         public SamplerStateShaderProperty()
@@ -60,7 +61,8 @@ namespace UnityEditor.ShaderGraph
                 displayName = displayName,
                 hidden = hidden,
                 overrideReferenceName = overrideReferenceName,
-                value = value
+                value = value,
+                precision = precision,
             };
         }
     }

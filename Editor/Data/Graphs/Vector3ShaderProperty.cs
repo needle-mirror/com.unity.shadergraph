@@ -6,6 +6,7 @@ namespace UnityEditor.ShaderGraph.Internal
 {
     [Serializable]
     [FormerName("UnityEditor.ShaderGraph.Vector3ShaderProperty")]
+    [BlackboardInputInfo(3)]
     public sealed class Vector3ShaderProperty : VectorShaderProperty
     {
         internal Vector3ShaderProperty()
@@ -39,7 +40,9 @@ namespace UnityEditor.ShaderGraph.Internal
             {
                 displayName = displayName,
                 hidden = hidden,
-                value = value
+                value = value,
+                precision = precision,
+                gpuInstanced = gpuInstanced,
             };
         }
     }

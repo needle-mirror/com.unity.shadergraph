@@ -8,6 +8,7 @@ namespace UnityEditor.ShaderGraph.Internal
 {
     [Serializable]
     [FormerName("UnityEditor.ShaderGraph.BooleanShaderProperty")]
+    [BlackboardInputInfo(20)]
     public sealed class BooleanShaderProperty : AbstractShaderProperty<bool>
     {
         internal BooleanShaderProperty()
@@ -46,7 +47,8 @@ namespace UnityEditor.ShaderGraph.Internal
             {
                 displayName = displayName,
                 hidden = hidden,
-                value = value
+                value = value,
+                precision = precision,
             };
         }
     }

@@ -6,6 +6,7 @@ using UnityEditor.ShaderGraph.Internal;
 namespace UnityEditor.ShaderGraph
 {
     [Serializable]
+    [BlackboardInputInfo(72)]
     class Matrix4ShaderProperty : MatrixShaderProperty
     {
         public Matrix4ShaderProperty()
@@ -43,7 +44,9 @@ namespace UnityEditor.ShaderGraph
             {
                 displayName = displayName,
                 hidden = hidden,
-                value = value
+                value = value,
+                precision = precision,
+                gpuInstanced = gpuInstanced,
             };
         }
     }

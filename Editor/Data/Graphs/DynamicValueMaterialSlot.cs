@@ -48,10 +48,12 @@ namespace UnityEditor.ShaderGraph
             set { m_Value = value; }
         }
 
+        public override bool isDefaultValue => value.Equals(defaultValue);
+
         public override VisualElement InstantiateControl()
         {
             var labels = k_Labels.Take(concreteValueType.GetChannelCount()).ToArray();
-            return new MultiFloatSlotControlView(owner, labels, () => value.GetRow(0), (newValue) => 
+            return new MultiFloatSlotControlView(owner, labels, () => value.GetRow(0), (newValue) =>
                 value = new Matrix4x4()
                 {
                     m00 = newValue.x, m01 = newValue.y, m02 = newValue.z, m03 = newValue.w,
@@ -77,7 +79,7 @@ namespace UnityEditor.ShaderGraph
         {
             var propType = concreteValueType.ToPropertyType();
             var pp = new PreviewProperty(propType) { name = name };
-            if (propType == PropertyType.Vector1)
+            if (propType == PropertyType.Float)
                 pp.floatValue = value.m00;
             else
                 pp.vector4Value = new Vector4(value.m00, value.m01, value.m02, value.m03);
@@ -142,6 +144,15 @@ namespace UnityEditor.ShaderGraph
             var slot = foundSlot as DynamicValueMaterialSlot;
             if (slot != null)
                 value = slot.value;
+        }
+
+        public override void CopyDefaultValue(MaterialSlot other)
+        {
+            base.CopyDefaultValue(other);
+            if (other is IMaterialSlotHasValue<Matrix4x4> ms)
+            {
+                m_DefaultValue = ms.defaultValue;
+            }
         }
     }
 }

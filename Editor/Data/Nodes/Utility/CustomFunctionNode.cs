@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +12,7 @@ namespace UnityEditor.ShaderGraph
 {
     [HasDependencies(typeof(MinimalCustomFunctionNode))]
     [Title("Utility", "Custom Function")]
-    class CustomFunctionNode : AbstractMaterialNode, IGeneratesBodyCode, IGeneratesFunction, IHasSettings
+    class CustomFunctionNode : AbstractMaterialNode, IGeneratesBodyCode, IGeneratesFunction
     {
         [Serializable]
         public class MinimalCustomFunctionNode : IHasDependencies
@@ -26,19 +26,24 @@ namespace UnityEditor.ShaderGraph
             [SerializeField]
             string m_FunctionSource = null;
 
-            public void GetSourceAssetDependencies(List<string> paths)
+            public void GetSourceAssetDependencies(AssetCollection assetCollection)
             {
                 if (m_SourceType == HlslSourceType.File)
                 {
                     m_FunctionSource = UpgradeFunctionSource(m_FunctionSource);
                     if (IsValidFunction(m_SourceType, m_FunctionName, m_FunctionSource, null))
                     {
-                        paths.Add(AssetDatabase.GUIDToAssetPath(m_FunctionSource));
+                        if (GUID.TryParse(m_FunctionSource, out GUID guid))
+                        {
+                            // as this is just #included into the generated .shader file
+                            // it doesn't actually need to be a dependency, other than for export package
+                            assetCollection.AddAssetDependency(guid, AssetCollection.Flags.IncludeInExportPackage);
+                        }
                     }
                 }
             }
         }
-        
+
         public static string[] s_ValidExtensions = { ".hlsl", ".cginc" };
         const string k_InvalidFileType = "Source file is not a valid file type. Valid file extensions are .hlsl and .cginc";
         const string k_MissingOutputSlot = "A Custom Function Node must have at least one output slot";
@@ -223,20 +228,16 @@ namespace UnityEditor.ShaderGraph
             if (edges.Any())
             {
                 var fromSocketRef = edges[0].outputSlot;
-                var fromNode = owner.GetNodeFromGuid<AbstractMaterialNode>(fromSocketRef.nodeGuid);
+                var fromNode = fromSocketRef.node;
                 if (fromNode == null)
                     return string.Empty;
 
-                var slot = fromNode.FindOutputSlot<MaterialSlot>(fromSocketRef.slotId);
-                if (slot == null)
-                    return string.Empty;
-
-                return ShaderGenerator.AdaptNodeOutput(fromNode, slot.id, port.concreteValueType);
+                return fromNode.GetOutputForSlot(fromSocketRef, port.concreteValueType, generationMode);
             }
 
             return port.GetDefaultValue(generationMode);
         }
-        
+
         bool IsValidFunction()
         {
             return IsValidFunction(sourceType, functionName, functionSource, functionBody);
@@ -275,7 +276,7 @@ namespace UnityEditor.ShaderGraph
                 var error = NodeUtils.ValidateSlotName(slot.RawDisplayName(), out string errorMessage);
                 if (error)
                 {
-                    owner.AddValidationError(tempId, errorMessage);
+                    owner.AddValidationError(objectId, errorMessage);
                     break;
                 }
             }
@@ -293,7 +294,7 @@ namespace UnityEditor.ShaderGraph
                         string extension = path.Substring(path.LastIndexOf('.'));
                         if(!s_ValidExtensions.Contains(extension))
                         {
-                            owner.AddValidationError(tempId, k_InvalidFileType, ShaderCompilerMessageSeverity.Error);
+                            owner.AddValidationError(objectId, k_InvalidFileType, ShaderCompilerMessageSeverity.Error);
                         }
                         else
                         {
@@ -304,30 +305,23 @@ namespace UnityEditor.ShaderGraph
             }
             if (!this.GetOutputSlots<MaterialSlot>().Any())
             {
-                owner.AddValidationError(tempId, k_MissingOutputSlot, ShaderCompilerMessageSeverity.Warning);
+                owner.AddValidationError(objectId, k_MissingOutputSlot, ShaderCompilerMessageSeverity.Warning);
             }
             ValidateSlotName();
 
             base.ValidateNode();
         }
 
-        public void Reload(HashSet<string> changedFileDependencies)
+        public bool Reload(HashSet<string> changedFileDependencies)
         {
             if (changedFileDependencies.Contains(m_FunctionSource))
             {
                 owner.ClearErrorsForNode(this);
                 ValidateNode();
                 Dirty(ModificationScope.Graph);
+                return true;
             }
-        }
-
-        public VisualElement CreateSettingsElement()
-        {
-            PropertySheet ps = new PropertySheet();
-            ps.Add(new ReorderableSlotListView(this, SlotType.Input));
-            ps.Add(new ReorderableSlotListView(this, SlotType.Output));
-            ps.Add(new HlslFunctionView(this));
-            return ps;
+            return false;
         }
 
         public static string UpgradeFunctionSource(string functionSource)
