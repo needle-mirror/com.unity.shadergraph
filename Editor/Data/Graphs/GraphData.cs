@@ -920,6 +920,10 @@ namespace UnityEditor.ShaderGraph
             if (fromNode == null || toNode == null)
                 return null;
 
+            // both nodes must belong to this graph
+            if ((fromNode.owner != this) || (toNode.owner != this))
+                return null;
+
             // if fromNode is already connected to toNode
             // do now allow a connection as toNode will then
             // have an edge to fromNode creating a cycle.
@@ -1030,7 +1034,8 @@ namespace UnityEditor.ShaderGraph
         {
             e = m_Edges.FirstOrDefault(x => x.Equals(e));
             if (e == null)
-                throw new ArgumentException("Trying to remove an edge that does not exist.", "e");
+                return;
+                //throw new ArgumentException("Trying to remove an edge that does not exist.", "e");
             m_Edges.Remove(e as Edge);
 
             BlockNode b = null;
@@ -1048,6 +1053,7 @@ namespace UnityEditor.ShaderGraph
             if (m_NodeEdges.TryGetValue(output.objectId, out outputNodeEdges))
                 outputNodeEdges.Remove(e);
 
+            m_AddedEdges.Remove(e);
             m_RemovedEdges.Add(e);
             if(b != null)
             {
@@ -1121,10 +1127,32 @@ namespace UnityEditor.ShaderGraph
             return edges;
         }
 
+        public void GetEdges(AbstractMaterialNode node, List<IEdge> foundEdges)
+        {
+            if (m_NodeEdges.TryGetValue(node.objectId, out var edges))
+            {
+                foundEdges.AddRange(edges);
+            }
+        }
+
+        public IEnumerable<IEdge> GetEdges(AbstractMaterialNode node)
+        {
+            List<IEdge> edges = new List<IEdge>();
+            GetEdges(node, edges);
+            return edges;
+        }
+
+        public void ForeachHLSLProperty(Action<HLSLProperty> action)
+        {
+            foreach (var prop in properties)
+                prop.ForeachHLSLProperty(action);
+        }
+
         public void CollectShaderProperties(PropertyCollector collector, GenerationMode generationMode)
         {
             foreach (var prop in properties)
             {
+                // ugh, this needs to be moved to the gradient property implementation
                 if(prop is GradientShaderProperty gradientProp && generationMode == GenerationMode.Preview)
                 {
                     GradientUtil.GetGradientPropertiesForPreview(collector, gradientProp.referenceName, gradientProp.value);
@@ -1657,10 +1685,9 @@ namespace UnityEditor.ShaderGraph
             var nodeList = graphToPaste.GetNodes<AbstractMaterialNode>();
             foreach (var node in nodeList)
             {
-                if(node is BlockNode blockNode)
-                {
+                // cannot paste block nodes, or unknown node types
+                if ((node is BlockNode) || (node is MultiJsonInternal.UnknownNodeType))
                     continue;
-                }
 
                 AbstractMaterialNode pastedNode = node;
 
@@ -1758,7 +1785,7 @@ namespace UnityEditor.ShaderGraph
             ChangeVersion(latestVersion);
         }
 
-        static T DeserializeLegacy<T>(string typeString, string json) where T : JsonObject
+        static T DeserializeLegacy<T>(string typeString, string json, Guid? overrideObjectId = null) where T : JsonObject
         {
             var jsonObj = MultiJsonInternal.CreateInstance(typeString);
             var value = jsonObj as T;
@@ -1767,11 +1794,18 @@ namespace UnityEditor.ShaderGraph
                 Debug.Log($"Cannot create instance for {typeString}");
                 return null;
             }
+
+            // by default, MultiJsonInternal.CreateInstance will create a new objectID randomly..
+            // we need some created objects to have deterministic objectIDs, because they affect the generated shader.
+            // if the generated shader is not deterministic, it can create ripple effects (i.e. causing Materials to be modified randomly as properties are renamed)
+            // so we provide this path to allow the calling code to override the objectID with something deterministic
+            if (overrideObjectId.HasValue)
+                value.OverrideObjectId(overrideObjectId.Value.ToString("N"));
             MultiJsonInternal.Enqueue(value, json);
             return value as T;
         }
 
-        static AbstractMaterialNode DeserializeLegacy(string typeString, string json)
+        static AbstractMaterialNode DeserializeLegacyNode(string typeString, string json, Guid? overrideObjectId = null)
         {
             var jsonObj = MultiJsonInternal.CreateInstance(typeString);
             var value = jsonObj as AbstractMaterialNode;
@@ -1779,11 +1813,15 @@ namespace UnityEditor.ShaderGraph
             {
                 //Special case - want to support nodes of unknwon type for cross pipeline compatability 
                 value = new LegacyUnknownTypeNode(typeString, json);
+                if (overrideObjectId.HasValue)
+                    value.OverrideObjectId(overrideObjectId.Value.ToString("N"));
                 MultiJsonInternal.Enqueue(value, json);
                 return value as AbstractMaterialNode;
             }
             else
             {
+                if (overrideObjectId.HasValue)
+                    value.OverrideObjectId(overrideObjectId.Value.ToString("N"));
                 MultiJsonInternal.Enqueue(value, json);
                 return value as AbstractMaterialNode;
             }
@@ -1804,6 +1842,9 @@ namespace UnityEditor.ShaderGraph
                 }
                 else
                 {
+                    Guid assetGuid;
+                    if (!Guid.TryParse(this.assetGuid, out assetGuid))
+                        assetGuid = JsonObject.GenerateNamespaceUUID(Guid.Empty, json);
 
                     var nodeGuidMap = new Dictionary<string, AbstractMaterialNode>();
                     var propertyGuidMap = new Dictionary<string, AbstractShaderProperty>();
@@ -1833,11 +1874,10 @@ namespace UnityEditor.ShaderGraph
 
                     foreach (var serializedProperty in graphData0.m_SerializedProperties)
                     {
-                        var property = DeserializeLegacy<AbstractShaderProperty>(serializedProperty.typeInfo.fullName, serializedProperty.JSONnodeData);
+                        var propObjectId = JsonObject.GenerateNamespaceUUID(assetGuid, serializedProperty.JSONnodeData);
+                        var property = DeserializeLegacy<AbstractShaderProperty>(serializedProperty.typeInfo.fullName, serializedProperty.JSONnodeData, propObjectId);
                         if (property == null)
-                        {
                             continue;
-                        }
 
                         m_Properties.Add(property);
 
@@ -1879,7 +1919,8 @@ namespace UnityEditor.ShaderGraph
                     {
                         var node0 = JsonUtility.FromJson<AbstractMaterialNode0>(serializedNode.JSONnodeData);
 
-                        var node = DeserializeLegacy(serializedNode.typeInfo.fullName, serializedNode.JSONnodeData);
+                        var nodeObjectId = JsonObject.GenerateNamespaceUUID(node0.m_GuidSerialized, "node");
+                        var node = DeserializeLegacyNode(serializedNode.typeInfo.fullName, serializedNode.JSONnodeData, nodeObjectId);
                         if (node == null)
                         {
                             continue;
@@ -1903,7 +1944,8 @@ namespace UnityEditor.ShaderGraph
 
                         foreach (var serializedSlot in node0.m_SerializableSlots)
                         {
-                            var slot = DeserializeLegacy<MaterialSlot>(serializedSlot.typeInfo.fullName, serializedSlot.JSONnodeData);
+                            var slotObjectId = JsonObject.GenerateNamespaceUUID(node0.m_GuidSerialized, serializedSlot.JSONnodeData);
+                            var slot = DeserializeLegacy<MaterialSlot>(serializedSlot.typeInfo.fullName, serializedSlot.JSONnodeData, slotObjectId);
                             if (slot == null)
                             {
                                 continue;
@@ -2032,6 +2074,32 @@ namespace UnityEditor.ShaderGraph
                                         var outputSlot = edge.outputSlot;
                                         m_Edges.Remove(edge);
                                         m_Edges.Add(new Edge(outputSlot, newInputSlotRef));
+                                    }
+                                }
+
+                                // manually handle a bug where fragment normal slots could get out of sync of the master node's set fragment normal space
+                                if (descriptor == BlockFields.SurfaceDescription.NormalOS)
+                                {
+                                    NormalMaterialSlot norm = newSlot as NormalMaterialSlot;
+                                    if(norm.space != CoordinateSpace.Object)
+                                    {
+                                        norm.space = CoordinateSpace.Object;
+                                    }
+                                }
+                                else if(descriptor == BlockFields.SurfaceDescription.NormalTS)
+                                {
+                                    NormalMaterialSlot norm = newSlot as NormalMaterialSlot;
+                                    if(norm.space != CoordinateSpace.Tangent)
+                                    {
+                                        norm.space = CoordinateSpace.Tangent;
+                                    }
+                                }
+                                else if(descriptor == BlockFields.SurfaceDescription.NormalWS)
+                                {
+                                    NormalMaterialSlot norm = newSlot as NormalMaterialSlot;
+                                    if(norm.space != CoordinateSpace.World)
+                                    {
+                                        norm.space = CoordinateSpace.World;
                                     }
                                 }
                             }
