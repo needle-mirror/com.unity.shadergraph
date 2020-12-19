@@ -14,8 +14,6 @@ namespace UnityEditor.ShaderGraph.Internal
             displayName = "Vector3";
         }
 
-        internal override int vectorDimension => 3;
-
         public override PropertyType propertyType => PropertyType.Vector3;
 
         internal override AbstractMaterialNode ToConcreteNode()

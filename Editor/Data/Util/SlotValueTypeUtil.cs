@@ -8,7 +8,7 @@ namespace UnityEditor.ShaderGraph
     {
         public static SlotValueType ToSlotValueType(this ConcreteSlotValueType concreteValueType)
         {
-            switch(concreteValueType)
+            switch (concreteValueType)
             {
                 case ConcreteSlotValueType.SamplerState:
                     return SlotValueType.SamplerState;
@@ -134,7 +134,7 @@ namespace UnityEditor.ShaderGraph
             switch (type)
             {
                 case ConcreteSlotValueType.SamplerState:
-                    return "UnitySamplerState";
+                    return "SamplerState";
                 case ConcreteSlotValueType.Matrix4:
                     return precisionToken + "4x4";
                 case ConcreteSlotValueType.Matrix3:
@@ -142,13 +142,13 @@ namespace UnityEditor.ShaderGraph
                 case ConcreteSlotValueType.Matrix2:
                     return precisionToken + "2x2";
                 case ConcreteSlotValueType.Texture2D:
-                    return "UnityTexture2D";
+                    return "Texture2D";
                 case ConcreteSlotValueType.Texture2DArray:
-                    return "UnityTexture2DArray";
+                    return "Texture2DArray";
                 case ConcreteSlotValueType.Texture3D:
-                    return "UnityTexture3D";
+                    return "Texture3D";
                 case ConcreteSlotValueType.Cubemap:
-                    return "UnityTextureCube";
+                    return "TextureCube";
                 case ConcreteSlotValueType.Gradient:
                     return "Gradient";
                 case ConcreteSlotValueType.Vector4:

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text;
 using System.Linq;
 using UnityEditor.Graphing;
@@ -18,9 +17,9 @@ namespace UnityEditor.ShaderGraph.Internal
         {
             displayName = "Float";
         }
-        
+
         public override PropertyType propertyType => PropertyType.Float;
-        
+
         internal override bool isExposable => true;
         internal override bool isRenamable => true;
 
@@ -28,7 +27,7 @@ namespace UnityEditor.ShaderGraph.Internal
         {
             get
             {
-                switch(enumType)
+                switch (enumType)
                 {
                     case EnumType.CSharpEnum:
                         return $"[Enum({m_CSharpEnumType.ToString()})]";
@@ -46,25 +45,16 @@ namespace UnityEditor.ShaderGraph.Internal
             }
         }
 
-        internal override string GetHLSLVariableName(bool isSubgraphProperty)
-        {
-            HLSLDeclaration decl = GetDefaultHLSLDeclaration();
-            if (decl == HLSLDeclaration.HybridPerInstance)
-                return $"UNITY_ACCESS_HYBRID_INSTANCED_PROP({referenceName}, {concretePrecision.ToShaderString()})";
-            else
-                return referenceName;
-        }
-
         internal override string GetPropertyBlockString()
         {
             string valueString = NodeUtils.FloatToShaderValueShaderLabSafe(value);
 
-            switch(floatType)
+            switch (floatType)
             {
                 case FloatType.Slider:
                     return $"{hideTagString}{referenceName}(\"{displayName}\", Range({NodeUtils.FloatToShaderValue(m_RangeValues.x)}, {NodeUtils.FloatToShaderValue(m_RangeValues.y)})) = {valueString}";
                 case FloatType.Integer:
-                    return $"{hideTagString}{referenceName}(\"{displayName}\", Int) = {((int)value).ToString(CultureInfo.InvariantCulture)}";
+                    return $"{hideTagString}{referenceName}(\"{displayName}\", Int) = {valueString}";
                 case FloatType.Enum:
                     return $"{hideTagString}{enumTagString}{referenceName}(\"{displayName}\", Float) = {valueString}";
                 default:
@@ -108,7 +98,7 @@ namespace UnityEditor.ShaderGraph.Internal
             get => m_EnumType;
             set => m_EnumType = value;
         }
-    
+
         Type m_CSharpEnumType;
 
         public Type cSharpEnumType
@@ -118,7 +108,7 @@ namespace UnityEditor.ShaderGraph.Internal
         }
 
         List<string> m_EnumNames = new List<string>();
-        
+
         public List<string> enumNames
         {
             get => m_EnumNames;
@@ -132,7 +122,7 @@ namespace UnityEditor.ShaderGraph.Internal
             get => m_EnumValues;
             set => m_EnumValues = value;
         }
-        
+
         internal override AbstractMaterialNode ToConcreteNode()
         {
             switch (m_FloatType)

@@ -37,6 +37,7 @@ namespace UnityEditor.ShaderGraph
                 result.Add(value.layers[layer].layerRefName);
             }
         }
+
         internal override void GetPropertyDisplayNames(List<string> result)
         {
             result.Add(displayName);
@@ -74,11 +75,7 @@ namespace UnityEditor.ShaderGraph
             int numLayers = value.layers.Count;
             if (numLayers > 0)
             {
-                HLSLDeclaration decl = HLSLDeclaration.UnityPerMaterial;
-                if (value.procedural)
-                    decl = GetDefaultHLSLDeclaration();
-
-                action(new HLSLProperty(HLSLType._CUSTOM, referenceName, decl, concretePrecision)
+                action(new HLSLProperty(HLSLType._CUSTOM, referenceName, HLSLDeclaration.UnityPerMaterial, concretePrecision)
                 {
                     customDeclaration = (ssb) =>
                     {
@@ -189,13 +186,11 @@ namespace UnityEditor.ShaderGraph
             {
                 string layerRefName = value.layers[layer].layerRefName;
                 var layerTexture = value.layers[layer].layerTexture;
-                var texture = layerTexture != null ? layerTexture.texture : null;
 
                 var textureInfo = new PropertyCollector.TextureInfo
                 {
                     name = layerRefName,
-                    textureId = texture != null ? texture.GetInstanceID() : 0,
-                    dimension = texture != null ? texture.dimension : UnityEngine.Rendering.TextureDimension.Any,
+                    textureId = (layerTexture != null && layerTexture.texture != null) ? layerTexture.texture.GetInstanceID() : 0,
                     modifiable = true
                 };
                 infos.Add(textureInfo);

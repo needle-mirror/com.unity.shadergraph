@@ -63,75 +63,14 @@ namespace UnityEditor.ShaderGraph
         Vector2 = ConcreteSlotValueType.Vector2,
         Float = ConcreteSlotValueType.Vector1, // This is currently the only renaming we need - rename Vector1 to Float
         Boolean = ConcreteSlotValueType.Boolean,
-        VirtualTexture = ConcreteSlotValueType.VirtualTexture,
-
-        BareSamplerState = 1000 + ConcreteSlotValueType.SamplerState,
-        BareTexture2D = 1000 + ConcreteSlotValueType.Texture2D,
-        BareTexture2DArray = 1000 + ConcreteSlotValueType.Texture2DArray,
-        BareTexture3D = 1000 + ConcreteSlotValueType.Texture3D,
-        BareCubemap = 1000 + ConcreteSlotValueType.Cubemap,
+        VirtualTexture = ConcreteSlotValueType.VirtualTexture
     }
 
     static class SlotValueHelper
     {
-        public static ConcreteSlotValueTypePopupName ToConcreteSlotValueTypePopupName(this ConcreteSlotValueType slotType, bool isBareResource)
+        public static bool AllowedAsSubgraphOutput(this ConcreteSlotValueType type)
         {
-            ConcreteSlotValueTypePopupName result = (ConcreteSlotValueTypePopupName)slotType;
-            switch (slotType)
-            {
-                case ConcreteSlotValueType.SamplerState:
-                    if (isBareResource)
-                        result = ConcreteSlotValueTypePopupName.BareSamplerState;
-                    break;
-                case ConcreteSlotValueType.Texture2D:
-                    if (isBareResource)
-                        result = ConcreteSlotValueTypePopupName.BareTexture2D;
-                    break;
-                case ConcreteSlotValueType.Texture2DArray:
-                    if (isBareResource)
-                        result = ConcreteSlotValueTypePopupName.BareTexture2DArray;
-                    break;
-                case ConcreteSlotValueType.Texture3D:
-                    if (isBareResource)
-                        result = ConcreteSlotValueTypePopupName.BareTexture3D;
-                    break;
-                case ConcreteSlotValueType.Cubemap:
-                    if (isBareResource)
-                        result = ConcreteSlotValueTypePopupName.BareCubemap;
-                    break;
-            }
-            return result;
-        }
-
-        public static ConcreteSlotValueType ToConcreteSlotValueType(this ConcreteSlotValueTypePopupName popup, out bool isBareResource)
-        {
-            switch (popup)
-            {
-                case ConcreteSlotValueTypePopupName.BareSamplerState:
-                    isBareResource = true;
-                    return ConcreteSlotValueType.SamplerState;
-                case ConcreteSlotValueTypePopupName.BareTexture2D:
-                    isBareResource = true;
-                    return ConcreteSlotValueType.Texture2D;
-                case ConcreteSlotValueTypePopupName.BareTexture2DArray:
-                    isBareResource = true;
-                    return ConcreteSlotValueType.Texture2DArray;
-                case ConcreteSlotValueTypePopupName.BareTexture3D:
-                    isBareResource = true;
-                    return ConcreteSlotValueType.Texture3D;
-                case ConcreteSlotValueTypePopupName.BareCubemap:
-                    isBareResource = true;
-                    return ConcreteSlotValueType.Cubemap;
-            };
-
-            isBareResource = false;
-            return (ConcreteSlotValueType) popup;
-        }
-
-        public static bool AllowedAsSubgraphOutput(this ConcreteSlotValueTypePopupName type)
-        {
-            // virtual textures and bare types disallowed
-            return (type < ConcreteSlotValueTypePopupName.VirtualTexture);
+            return type != ConcreteSlotValueType.VirtualTexture;
         }
 
         public static int GetChannelCount(this ConcreteSlotValueType type)
@@ -199,11 +138,11 @@ namespace UnityEditor.ShaderGraph
                     {ConcreteSlotValueType.Vector3, validVectors},
                     {ConcreteSlotValueType.Vector4, validVectors},
                     {ConcreteSlotValueType.Matrix2, new List<SlotValueType>()
-                        {SlotValueType.Dynamic, SlotValueType.DynamicMatrix, SlotValueType.Matrix2}},
+                     {SlotValueType.Dynamic, SlotValueType.DynamicMatrix, SlotValueType.Matrix2}},
                     {ConcreteSlotValueType.Matrix3, new List<SlotValueType>()
-                        {SlotValueType.Dynamic, SlotValueType.DynamicMatrix, SlotValueType.Matrix2, SlotValueType.Matrix3}},
+                     {SlotValueType.Dynamic, SlotValueType.DynamicMatrix, SlotValueType.Matrix2, SlotValueType.Matrix3}},
                     {ConcreteSlotValueType.Matrix4, new List<SlotValueType>()
-                        {SlotValueType.Dynamic, SlotValueType.DynamicMatrix, SlotValueType.Matrix2, SlotValueType.Matrix3, SlotValueType.Matrix4}},
+                     {SlotValueType.Dynamic, SlotValueType.DynamicMatrix, SlotValueType.Matrix2, SlotValueType.Matrix3, SlotValueType.Matrix4}},
                     {ConcreteSlotValueType.Texture2D, new List<SlotValueType>() {SlotValueType.Texture2D}},
                     {ConcreteSlotValueType.Texture3D, new List<SlotValueType>() {SlotValueType.Texture3D}},
                     {ConcreteSlotValueType.Texture2DArray, new List<SlotValueType>() {SlotValueType.Texture2DArray}},
@@ -214,7 +153,7 @@ namespace UnityEditor.ShaderGraph
                 };
             }
 
-            if(s_ValidConversions.TryGetValue(outputType, out s_ValidSlotTypes))
+            if (s_ValidConversions.TryGetValue(outputType, out s_ValidSlotTypes))
             {
                 return s_ValidSlotTypes.Contains(inputType);
             }

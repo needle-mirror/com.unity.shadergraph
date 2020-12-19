@@ -12,7 +12,7 @@
     min-width: 100px;
     min-height: 100px;
     width: 300px;
-    height: 275px;
+    height: 400px;
 }
 
 .InspectorView > .mainContainer {
@@ -30,7 +30,6 @@
     flex-direction: column;
     flex-grow: 1;
     align-items: stretch;
-    padding-bottom: 15px;
 }
 
 .InspectorView > .mainContainer > #content > #header {

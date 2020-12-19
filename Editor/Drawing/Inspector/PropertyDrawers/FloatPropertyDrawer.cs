@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using UnityEditor.ShaderGraph.Drawing;
 using UnityEngine;
@@ -18,12 +18,11 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
             out VisualElement propertyFloatField,
             int indentLevel = 0)
         {
-            var floatField = new FloatField {label = "X", value = fieldToDraw};
-            floatField.labelElement.style.minWidth = 15;
+            var floatField = new FloatField {value = fieldToDraw};
 
             if (valueChangedCallback != null)
             {
-                floatField.RegisterValueChangedCallback(evt => { valueChangedCallback((float) evt.newValue); });
+                floatField.RegisterValueChangedCallback(evt => { valueChangedCallback((float)evt.newValue); });
             }
 
             propertyFloatField = floatField;
@@ -41,7 +40,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
             return this.CreateGUI(
                 // Use the setter from the provided property as the callback
                 newValue => propertyInfo.GetSetMethod(true).Invoke(actualObject, new object[] {newValue}),
-                (float) propertyInfo.GetValue(actualObject),
+                (float)propertyInfo.GetValue(actualObject),
                 attribute.labelName,
                 out var propertyVisualElement);
         }

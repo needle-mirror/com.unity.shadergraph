@@ -5,9 +5,8 @@ using UnityEngine;
 namespace UnityEditor.ShaderGraph
 {
     [Serializable]
-    class StickyNoteData : JsonObject, IGroupItem, IRectInterface
+    class StickyNoteData : JsonObject, IGroupItem
     {
-
         [SerializeField]
         string m_Title;
 
@@ -53,15 +52,6 @@ namespace UnityEditor.ShaderGraph
             set => m_Position = value;
         }
 
-        Rect IRectInterface.rect
-        {
-            get => position;
-            set
-            {
-                position = value;
-            }
-        }
-
         [SerializeField]
         JsonRef<GroupData> m_Group = null;
 
@@ -85,7 +75,5 @@ namespace UnityEditor.ShaderGraph
             m_Position = position;
             m_Content = content;
         }
-
     }
 }
-

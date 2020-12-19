@@ -110,14 +110,14 @@ namespace UnityEditor.ShaderGraph
             if (generationMode == GenerationMode.ForReals)
             {
                 sb.AppendLine($"{GetFunctionName()}(" +
-                           $"IN.BoneIndices, " +
-                           $"IN.BoneWeights, " +
-                           $"{GetSlotValue(kPositionSlotId, generationMode)}, " +
-                           $"{GetSlotValue(kNormalSlotId, generationMode)}, " +
-                           $"{GetSlotValue(kTangentSlotId, generationMode)}, " +
-                           $"{GetVariableNameForSlot(kPositionOutputSlotId)}, " +
-                           $"{GetVariableNameForSlot(kNormalOutputSlotId)}, " +
-                           $"{GetVariableNameForSlot(kTangentOutputSlotId)});");
+                    $"IN.BoneIndices, " +
+                    $"IN.BoneWeights, " +
+                    $"{GetSlotValue(kPositionSlotId, generationMode)}, " +
+                    $"{GetSlotValue(kNormalSlotId, generationMode)}, " +
+                    $"{GetSlotValue(kTangentSlotId, generationMode)}, " +
+                    $"{GetVariableNameForSlot(kPositionOutputSlotId)}, " +
+                    $"{GetVariableNameForSlot(kNormalOutputSlotId)}, " +
+                    $"{GetVariableNameForSlot(kTangentOutputSlotId)});");
             }
 #if ENABLE_HYBRID_RENDERER_V2
             sb.AppendLine("#else");
@@ -138,25 +138,25 @@ namespace UnityEditor.ShaderGraph
             registry.ProvideFunction(GetFunctionName(), sb =>
             {
                 sb.AppendLine($"void {GetFunctionName()}(" +
-                            "uint4 indices, " +
-                            "$precision4 weights, " +
-                            "$precision3 positionIn, " +
-                            "$precision3 normalIn, " +
-                            "$precision3 tangentIn, " +
-                            "out $precision3 positionOut, " +
-                            "out $precision3 normalOut, " +
-                            "out $precision3 tangentOut)");
+                    "uint4 indices, " +
+                    "$precision4 weights, " +
+                    "$precision3 positionIn, " +
+                    "$precision3 normalIn, " +
+                    "$precision3 tangentIn, " +
+                    "out $precision3 positionOut, " +
+                    "out $precision3 normalOut, " +
+                    "out $precision3 tangentOut)");
                 sb.AppendLine("{");
                 using (sb.IndentScope())
                 {
                     sb.AppendLine("for (int i = 0; i < 4; ++i)");
                     sb.AppendLine("{");
                     using (sb.IndentScope())
-                {
+                    {
 #if HYBRID_RENDERER_0_6_0_OR_NEWER
-                        sb.AppendLine("$precision3x4 skinMatrix = _SkinMatrices[indices[i] + asint(UNITY_ACCESS_HYBRID_INSTANCED_PROP(_SkinMatrixIndex,float))];");
+                        sb.AppendLine("$precision3x4 skinMatrix = _SkinMatrices[indices[i] + asint(_SkinMatrixIndex)];");
 #else
-                        sb.AppendLine("$precision3x4 skinMatrix = _SkinMatrices[indices[i] + (int)UNITY_ACCESS_HYBRID_INSTANCED_PROP(_SkinMatricesOffset,float)];");
+                        sb.AppendLine("$precision3x4 skinMatrix = _SkinMatrices[indices[i] + (int)_SkinMatricesOffset];");
 #endif
                         sb.AppendLine("$precision3 vtransformed = mul(skinMatrix, $precision4(positionIn, 1));");
                         sb.AppendLine("$precision3 ntransformed = mul(skinMatrix, $precision4(normalIn, 0));");

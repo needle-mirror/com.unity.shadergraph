@@ -24,7 +24,7 @@ namespace UnityEditor.ShaderGraph
             get => base.value;
             set
             {
-                overrideReferenceName = $"SamplerState_{value.filter}_{value.wrap}";
+                overrideReferenceName = $"{concreteShaderValueType.ToShaderString()}_{value.filter}_{value.wrap}";
                 base.value = value;
             }
         }
@@ -38,15 +38,7 @@ namespace UnityEditor.ShaderGraph
 
         internal override string GetPropertyAsArgumentString()
         {
-            return $"UnitySamplerState {referenceName}";
-        }
-
-        internal override string GetHLSLVariableName(bool isSubgraphProperty)
-        {
-            if (isSubgraphProperty)
-                return referenceName;
-            else
-                return $"UnityBuildSamplerStateStruct({referenceName})";
+            return $"SamplerState {referenceName}";
         }
 
         internal override AbstractMaterialNode ToConcreteNode()

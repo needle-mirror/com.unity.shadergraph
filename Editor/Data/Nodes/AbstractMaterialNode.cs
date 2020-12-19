@@ -12,7 +12,7 @@ using UnityEngine.Assertions;
 namespace UnityEditor.ShaderGraph
 {
     [Serializable]
-    abstract class AbstractMaterialNode : JsonObject, IGroupItem, IRectInterface
+    abstract class AbstractMaterialNode : JsonObject, IGroupItem
     {
         [SerializeField]
         JsonRef<GroupData> m_Group = null;
@@ -91,17 +91,6 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
-        Rect IRectInterface.rect
-        {
-            get => drawState.position;
-            set
-            {
-                var state = drawState;
-                state.position = value;
-                drawState = state;
-            }
-        }
-
         public virtual bool canSetPrecision
         {
             get { return true; }
@@ -139,20 +128,15 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
-        // by default, if this returns null, the system will allow creation of any previous version
-        public virtual IEnumerable<int> allowedNodeVersions => null;
-
         // Nodes that want to have a preview area can override this and return true
         public virtual bool hasPreview
         {
             get { return false; }
         }
 
-        [SerializeField]
-        internal PreviewMode m_PreviewMode = PreviewMode.Inherit;
         public virtual PreviewMode previewMode
         {
-            get { return m_PreviewMode; }
+            get { return PreviewMode.Preview2D; }
         }
 
         public virtual bool allowedInSubGraph
@@ -201,7 +185,7 @@ namespace UnityEditor.ShaderGraph
 
         public void SetOverrideActiveState(ActiveState overrideState, bool updateConnections = true)
         {
-            if(m_ActiveState == overrideState)
+            if (m_ActiveState == overrideState)
             {
                 return;
             }
@@ -216,7 +200,7 @@ namespace UnityEditor.ShaderGraph
                     }
                     break;
                 case ActiveState.ExplicitInactive:
-                    if(m_IsActive == false)
+                    if (m_IsActive == false)
                     {
                         break;
                     }
@@ -231,7 +215,7 @@ namespace UnityEditor.ShaderGraph
                         break;
                     }
                 case ActiveState.ExplicitActive:
-                    if(m_IsActive == true)
+                    if (m_IsActive == true)
                     {
                         break;
                     }
@@ -253,7 +237,7 @@ namespace UnityEditor.ShaderGraph
             if (m_IsActive == value)
                 return;
 
-            if(m_ActiveState != ActiveState.Implicit)
+            if (m_ActiveState != ActiveState.Implicit)
             {
                 Debug.LogError($"Cannot set IsActive on Node {this} when value is explicitly overriden by ActiveState {m_ActiveState}");
                 return;
@@ -267,22 +251,19 @@ namespace UnityEditor.ShaderGraph
             {
                 NodeUtils.ReevaluateActivityOfConnectedNodes(this);
             }
-
         }
-
 
         public virtual bool isValid
         {
             get { return m_IsValid; }
             set
             {
-                if(m_IsValid == value)
+                if (m_IsValid == value)
                     return;
 
                 m_IsValid = value;
             }
         }
-
 
 
         string m_DefaultVariableName;
@@ -320,6 +301,7 @@ namespace UnityEditor.ShaderGraph
         {
             m_CustomColors.Set(provider, color);
         }
+
         #endregion
 
         protected AbstractMaterialNode()
@@ -440,10 +422,10 @@ namespace UnityEditor.ShaderGraph
             if (slot == null)
                 return string.Empty;
 
-                if (fromSocketRef.node.isActive)
-            return GenerationUtils.AdaptNodeOutput(this, slot.id, valueType);
-                else
-                    return slot.GetDefaultValue(generationMode);
+            if (fromSocketRef.node.isActive)
+                return GenerationUtils.AdaptNodeOutput(this, slot.id, valueType);
+            else
+                return slot.GetDefaultValue(generationMode);
         }
 
         public AbstractMaterialNode GetInputNodeFromSlot(int inputSlotId)
@@ -468,7 +450,7 @@ namespace UnityEditor.ShaderGraph
                 case 0:
                     return ConcreteSlotValueType.Vector1;
                 case 1:
-                    if(SlotValueHelper.AreCompatible(SlotValueType.DynamicVector, inputTypesDistinct.First()))
+                    if (SlotValueHelper.AreCompatible(SlotValueType.DynamicVector, inputTypesDistinct.First()))
                         return inputTypesDistinct.First();
                     break;
                 default:
@@ -504,7 +486,7 @@ namespace UnityEditor.ShaderGraph
 
         protected const string k_validationErrorMessage = "Error found during node validation";
 
-        public virtual void EvaluateConcretePrecision(List<MaterialSlot> inputSlots)
+        public virtual void EvaluateConcretePrecision()
         {
             // If Node has a precision override use that
             if (precision != Precision.Inherit)
@@ -514,10 +496,13 @@ namespace UnityEditor.ShaderGraph
             }
 
             // Get inputs
+            using (var tempSlots = PooledList<MaterialSlot>.Get())
             {
+                GetInputSlots(tempSlots);
+
                 // If no inputs were found use the precision of the Graph
                 // This can be removed when parameters are considered as true inputs
-                if (inputSlots.Count == 0)
+                if (tempSlots.Count == 0)
                 {
                     m_ConcretePrecision = owner.concretePrecision;
                     return;
@@ -526,7 +511,7 @@ namespace UnityEditor.ShaderGraph
                 // Otherwise compare precisions from inputs
                 var precisionsToCompare = new List<int>();
 
-                foreach (var inputSlot in inputSlots)
+                foreach (var inputSlot in tempSlots)
                 {
                     // If input port doesnt have an edge use the Graph's precision for that input
                     var edges = owner?.GetEdges(inputSlot.slotReference).ToList();
@@ -552,7 +537,7 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
-        public virtual void EvaluateDynamicMaterialSlots(List<MaterialSlot> inputSlots, List<MaterialSlot> outputSlots)
+        public virtual void EvaluateDynamicMaterialSlots()
         {
             var dynamicInputSlotsToCompare = DictionaryPool<DynamicVectorMaterialSlot, ConcreteSlotValueType>.Get();
             var skippedDynamicSlots = ListPool<DynamicVectorMaterialSlot>.Get();
@@ -561,8 +546,10 @@ namespace UnityEditor.ShaderGraph
             var skippedDynamicMatrixSlots = ListPool<DynamicMatrixMaterialSlot>.Get();
 
             // iterate the input slots
+            using (var tempSlots = PooledList<MaterialSlot>.Get())
             {
-                foreach (var inputSlot in inputSlots)
+                GetInputSlots(tempSlots);
+                foreach (var inputSlot in tempSlots)
                 {
                     inputSlot.hasError = false;
                     // if there is a connection
@@ -623,8 +610,10 @@ namespace UnityEditor.ShaderGraph
                 foreach (var skippedSlot in skippedDynamicMatrixSlots)
                     skippedSlot.SetConcreteType(dynamicMatrixType);
 
-                bool inputError = inputSlots.Any(x => x.hasError);
-                if(inputError)
+                tempSlots.Clear();
+                GetInputSlots(tempSlots);
+                bool inputError = tempSlots.Any(x => x.hasError);
+                if (inputError)
                 {
                     owner.AddConcretizationError(objectId, string.Format("Node {0} had input error", objectId));
                     hasError = true;
@@ -634,7 +623,9 @@ namespace UnityEditor.ShaderGraph
                 // their slotType will either be the default output slotType
                 // or the above dynamic slotType for dynamic nodes
                 // or error if there is an input error
-                foreach (var outputSlot in outputSlots)
+                tempSlots.Clear();
+                GetOutputSlots(tempSlots);
+                foreach (var outputSlot in tempSlots)
                 {
                     outputSlot.hasError = false;
 
@@ -656,7 +647,10 @@ namespace UnityEditor.ShaderGraph
                     }
                 }
 
-                if(outputSlots.Any(x => x.hasError))
+
+                tempSlots.Clear();
+                GetOutputSlots(tempSlots);
+                if (tempSlots.Any(x => x.hasError))
                 {
                     owner.AddConcretizationError(objectId, string.Format("Node {0} had output error", objectId));
                     hasError = true;
@@ -675,21 +669,12 @@ namespace UnityEditor.ShaderGraph
         {
             hasError = false;
             owner?.ClearErrorsForNode(this);
-
-            using (var inputSlots = PooledList<MaterialSlot>.Get())
-            using (var outputSlots = PooledList<MaterialSlot>.Get())
-            {
-                GetInputSlots(inputSlots);
-                GetOutputSlots(outputSlots);
-
-                EvaluateConcretePrecision(inputSlots);
-                EvaluateDynamicMaterialSlots(inputSlots, outputSlots);
-            }
+            EvaluateConcretePrecision();
+            EvaluateDynamicMaterialSlots();
         }
 
         public virtual void ValidateNode()
         {
-
         }
 
         public virtual bool canCutNode => true;
@@ -725,12 +710,9 @@ namespace UnityEditor.ShaderGraph
                 {
                     tempPreviewProperties.Clear();
                     tempEdges.Clear();
-                    if (owner != null)
-                    {
-                        owner.GetEdges(s.slotReference, tempEdges);
-                        if (tempEdges.Any())
-                            continue;
-                    }
+                    owner.GetEdges(s.slotReference, tempEdges);
+                    if (tempEdges.Any())
+                        continue;
 
                     s.GetPreviewProperties(tempPreviewProperties, GetVariableNameForSlot(s.id));
                     for (int i = 0; i < tempPreviewProperties.Count; i++)
@@ -759,7 +741,7 @@ namespace UnityEditor.ShaderGraph
 
         public MaterialSlot AddSlot(MaterialSlot slot, bool attemptToModifyExistingInstance = true)
         {
-            if(slot == null)
+            if (slot == null)
             {
                 throw new ArgumentException($"Trying to add null slot to node {this}");
             }
@@ -927,7 +909,7 @@ namespace UnityEditor.ShaderGraph
 
         protected void EnqueSlotsForSerialization()
         {
-            foreach(var slot in m_Slots)
+            foreach (var slot in m_Slots)
             {
                 slot.OnBeforeSerialize();
             }

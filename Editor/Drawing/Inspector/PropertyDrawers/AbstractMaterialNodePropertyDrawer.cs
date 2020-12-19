@@ -12,13 +12,8 @@ using UnityEngine;
 
 namespace  UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 {
-    internal interface IGetNodePropertyDrawerPropertyData
-    {
-        void GetPropertyData(Action setNodesAsDirtyCallback, Action updateNodeViewsCallback);
-    }
-
     [SGPropertyDrawer(typeof(AbstractMaterialNode))]
-    public class AbstractMaterialNodePropertyDrawer : IPropertyDrawer, IGetNodePropertyDrawerPropertyData
+    public class AbstractMaterialNodePropertyDrawer : IPropertyDrawer
     {
         public Action inspectorUpdateDelegate { get; set; }
 
@@ -47,23 +42,44 @@ namespace  UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                     m_updateNodeViewsCallback?.Invoke();
                     node.Dirty(ModificationScope.Graph);
                 });
-            
+
                 if (help != null)
                 {
                     nodeSettings.Insert(0, help);
                 }
             }
+            EnumField precisionField = null;
+            if (node.canSetPrecision)
+            {
+                precisionField = new EnumField(node.precision);
+                var propertyRow = new PropertyRow(new Label("Precision"));
+                propertyRow.Add(precisionField, (field) =>
+                {
+                    field.RegisterValueChangedCallback(evt =>
+                    {
+                        if (evt.newValue.Equals(node.precision))
+                            return;
 
-            PropertyDrawerUtils.AddDefaultNodeProperties(nodeSettings, node, m_setNodesAsDirtyCallback, m_updateNodeViewsCallback);
-
-            propertyVisualElement = null;
-
+                        m_setNodesAsDirtyCallback();
+                        node.owner.owner.RegisterCompleteObjectUndo("Change precision");
+                        node.precision = (Precision)evt.newValue;
+                        node.owner.ValidateGraph();
+                        m_updateNodeViewsCallback();
+                        node.Dirty(ModificationScope.Graph);
+                    });
+                });
+                if (node is Serialization.MultiJsonInternal.UnknownNodeType)
+                    precisionField.SetEnabled(false);
+                nodeSettings.Add(propertyRow);
+            }
+            propertyVisualElement = precisionField;
             return nodeSettings;
         }
+
         public VisualElement DrawProperty(PropertyInfo propertyInfo, object actualObject, InspectableAttribute attribute)
         {
             return this.CreateGUI(
-                (AbstractMaterialNode) actualObject,
+                (AbstractMaterialNode)actualObject,
                 attribute,
                 out var propertyVisualElement);
         }

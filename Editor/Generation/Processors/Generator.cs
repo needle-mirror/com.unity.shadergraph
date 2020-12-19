@@ -18,8 +18,7 @@ namespace UnityEditor.ShaderGraph
         GraphData m_GraphData;
         AbstractMaterialNode m_OutputNode;
         Target[] m_Targets;
-        List<BlockNode> m_ActiveBlocks;
-        List<BlockNode> m_TemporaryBlocks;
+        List<BlockNode> m_Blocks;
         GenerationMode m_Mode;
         string m_Name;
 
@@ -29,7 +28,7 @@ namespace UnityEditor.ShaderGraph
 
         public string generatedShader => m_Builder.ToCodeBlock();
         public List<PropertyCollector.TextureInfo> configuredTextures => m_ConfiguredTextures;
-        public List<BlockNode> temporaryBlocks => m_TemporaryBlocks;
+        public List<BlockNode> blocks => m_Blocks;
 
         public Generator(GraphData graphData, AbstractMaterialNode outputNode, GenerationMode mode, string name, AssetCollection assetCollection)
         {
@@ -42,15 +41,14 @@ namespace UnityEditor.ShaderGraph
             m_ConfiguredTextures = new List<PropertyCollector.TextureInfo>();
             m_assetCollection = assetCollection;
 
-            m_ActiveBlocks = graphData.GetNodes<BlockNode>().ToList();
-            m_TemporaryBlocks = new List<BlockNode>();
+            m_Blocks = graphData.GetNodes<BlockNode>().ToList();
             GetTargetImplementations();
             BuildShader();
         }
 
         void GetTargetImplementations()
         {
-            if(m_OutputNode == null)
+            if (m_OutputNode == null)
             {
                 m_Targets = m_GraphData.activeTargets.ToArray();
             }
@@ -60,22 +58,22 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
-        public ActiveFields GatherActiveFieldsFromNode(AbstractMaterialNode outputNode, PassDescriptor pass, List<(BlockFieldDescriptor descriptor, bool isDefaultValue)> activeBlocks, List<BlockFieldDescriptor> connectedBlocks, Target target)
+        public ActiveFields GatherActiveFieldsFromNode(AbstractMaterialNode outputNode, PassDescriptor pass, List<(BlockFieldDescriptor descriptor, bool isDefaultValue)> blocks, List<BlockFieldDescriptor> connectedBlocks, Target target)
         {
             var activeFields = new ActiveFields();
-            if(outputNode == null)
+            if (outputNode == null)
             {
                 bool hasDotsProperties = false;
                 m_GraphData.ForeachHLSLProperty(h =>
-                    {
-                        if (h.declaration == HLSLDeclaration.HybridPerInstance)
-                            hasDotsProperties = true;
-                    });
+                {
+                    if (h.declaration == HLSLDeclaration.HybridPerInstance)
+                        hasDotsProperties = true;
+                });
 
-                var context = new TargetFieldContext(pass, activeBlocks, connectedBlocks, hasDotsProperties);
+                var context = new TargetFieldContext(pass, blocks, connectedBlocks, hasDotsProperties);
                 target.GetFields(ref context);
                 var fields = GenerationUtils.GetActiveFieldsFromConditionals(context.conditionalFields.ToArray());
-                foreach(FieldDescriptor field in fields)
+                foreach (FieldDescriptor field in fields)
                     activeFields.baseInstance.Add(field);
             }
             // Preview shader
@@ -89,22 +87,21 @@ namespace UnityEditor.ShaderGraph
         void BuildShader()
         {
             var activeNodeList = Graphing.ListPool<AbstractMaterialNode>.Get();
-            bool ignoreActiveState = (m_Mode == GenerationMode.Preview);  // for previews, we ignore node active state
             if (m_OutputNode == null)
             {
-                foreach (var block in m_ActiveBlocks)
+                foreach (var block in m_Blocks)
                 {
                     // IsActive is equal to if any active implementation has set active blocks
                     // This avoids another call to SetActiveBlocks on each TargetImplementation
-                    if(!block.isActive)
+                    if (!block.isActive)
                         continue;
-                    
-                    NodeUtils.DepthFirstCollectNodesFromNode(activeNodeList, block, NodeUtils.IncludeSelf.Include, ignoreActiveState: ignoreActiveState);
+
+                    NodeUtils.DepthFirstCollectNodesFromNode(activeNodeList, block, NodeUtils.IncludeSelf.Include);
                 }
             }
             else
             {
-                NodeUtils.DepthFirstCollectNodesFromNode(activeNodeList, m_OutputNode, ignoreActiveState: ignoreActiveState);
+                NodeUtils.DepthFirstCollectNodesFromNode(activeNodeList, m_OutputNode);
             }
 
             var shaderProperties = new PropertyCollector();
@@ -112,20 +109,11 @@ namespace UnityEditor.ShaderGraph
             m_GraphData.CollectShaderProperties(shaderProperties, m_Mode);
             m_GraphData.CollectShaderKeywords(shaderKeywords, m_Mode);
 
-            if(m_GraphData.GetKeywordPermutationCount() > ShaderGraphPreferences.variantLimit)
+            if (m_GraphData.GetKeywordPermutationCount() > ShaderGraphPreferences.variantLimit)
             {
-                string graphName = "";
-                if(m_GraphData.owner != null)
-                {
-                    string path = AssetDatabase.GUIDToAssetPath(m_GraphData.owner.AssetGuid);
-                    if(path != null)
-                    {
-                        graphName = Path.GetFileNameWithoutExtension(path);
-                    }
-                }
-                Debug.LogError($"Error in Shader Graph {graphName}:{ShaderKeyword.kVariantLimitWarning}");
+                m_GraphData.AddValidationError(m_OutputNode.objectId, ShaderKeyword.kVariantLimitWarning, Rendering.ShaderCompilerMessageSeverity.Error);
 
-                m_ConfiguredTextures = shaderProperties.GetConfiguredTextures();
+                m_ConfiguredTextures = shaderProperties.GetConfiguredTexutres();
                 m_Builder.AppendLines(ShaderGraphImporter.k_ErrorShader);
             }
 
@@ -133,38 +121,33 @@ namespace UnityEditor.ShaderGraph
                 activeNode.CollectShaderProperties(shaderProperties, m_Mode);
 
             // Collect excess shader properties from the TargetImplementation
-            foreach(var target in m_Targets)
+            foreach (var target in m_Targets)
             {
                 // TODO: Setup is required to ensure all Targets are initialized
-                // TODO: Find a way to only require this once 
+                // TODO: Find a way to only require this once
                 TargetSetupContext context = new TargetSetupContext();
                 target.Setup(ref context);
-                
+
                 target.CollectShaderProperties(shaderProperties, m_Mode);
             }
-
-            // set the property collector to read only
-            // (to ensure no rogue target or pass starts adding more properties later..)
-            shaderProperties.SetReadOnly();
 
             m_Builder.AppendLine(@"Shader ""{0}""", m_Name);
             using (m_Builder.BlockScope())
             {
                 GenerationUtils.GeneratePropertiesBlock(m_Builder, shaderProperties, shaderKeywords, m_Mode);
 
-                for(int i = 0; i < m_Targets.Length; i++)
+                for (int i = 0; i < m_Targets.Length; i++)
                 {
                     TargetSetupContext context = new TargetSetupContext(m_assetCollection);
 
                     // Instead of setup target, we can also just do get context
                     m_Targets[i].Setup(ref context);
 
-                    var subShaderProperties = GetSubShaderPropertiesForTarget(m_Targets[i], m_GraphData, m_Mode, m_OutputNode, m_TemporaryBlocks);
                     foreach (var subShader in context.subShaders)
                     {
-                        GenerateSubShader(i, subShader, subShaderProperties);
+                        GenerateSubShader(i, subShader);
                     }
-                    
+
                     var customEditor = context.defaultShaderGUI;
                     if (customEditor != null && m_Targets[i].WorksWithSRP(GraphicsSettings.currentRenderPipeline))
                     {
@@ -175,12 +158,12 @@ namespace UnityEditor.ShaderGraph
                 m_Builder.AppendLine(@"FallBack ""Hidden/Shader Graph/FallbackError""");
             }
 
-            m_ConfiguredTextures = shaderProperties.GetConfiguredTextures();
+            m_ConfiguredTextures = shaderProperties.GetConfiguredTexutres();
         }
 
-        void GenerateSubShader(int targetIndex, SubShaderDescriptor descriptor, PropertyCollector subShaderProperties)
+        void GenerateSubShader(int targetIndex, SubShaderDescriptor descriptor)
         {
-            if(descriptor.passes == null)
+            if (descriptor.passes == null)
                 return;
 
             // Early out of preview generation if no passes are used in preview
@@ -188,113 +171,33 @@ namespace UnityEditor.ShaderGraph
                 return;
 
             m_Builder.AppendLine("SubShader");
-            using(m_Builder.BlockScope())
+            using (m_Builder.BlockScope())
             {
                 GenerationUtils.GenerateSubShaderTags(m_Targets[targetIndex], descriptor, m_Builder);
 
-                // Get block descriptor list here (from ALL active blocks)
-                List<(BlockFieldDescriptor descriptor, bool isDefaultValue)> activeBlockDescriptors = m_ActiveBlocks.Select(x => (x.descriptor, x.GetInputSlots<MaterialSlot>().FirstOrDefault().IsUsingDefaultValue())).ToList();
-                var connectedBlockDescriptors = m_ActiveBlocks.Where(x => x.IsSlotConnected(0)).Select(x => x.descriptor).ToList();
+                // Get block descriptor list here as we will add temporary blocks to m_Blocks during pass evaluations
+                List<(BlockFieldDescriptor descriptor, bool isDefaultValue)> currentBlockDescriptors = m_Blocks.Select(x => (x.descriptor, x.GetInputSlots<MaterialSlot>().FirstOrDefault().IsUsingDefaultValue())).ToList();
+                var connectedBlockDescriptors = m_Blocks.Where(x => x.IsSlotConnected(0)).Select(x => x.descriptor).ToList();
 
-                foreach(PassCollection.Item pass in descriptor.passes)
+                foreach (PassCollection.Item pass in descriptor.passes)
                 {
-                    var activeFields = GatherActiveFieldsFromNode(m_OutputNode, pass.descriptor, activeBlockDescriptors, connectedBlockDescriptors, m_Targets[targetIndex]);
+                    var activeFields = GatherActiveFieldsFromNode(m_OutputNode, pass.descriptor, currentBlockDescriptors, connectedBlockDescriptors, m_Targets[targetIndex]);
 
                     // TODO: cleanup this preview check, needed for HD decal preview pass
-                    if(m_Mode == GenerationMode.Preview)
+                    if (m_Mode == GenerationMode.Preview)
                         activeFields.baseInstance.Add(Fields.IsPreview);
 
                     // Check masternode fields for valid passes
-                    if(pass.TestActive(activeFields))
-                        GenerateShaderPass(targetIndex, pass.descriptor, activeFields, activeBlockDescriptors.Select(x => x.descriptor).ToList(), subShaderProperties);
+                    if (pass.TestActive(activeFields))
+                        GenerateShaderPass(targetIndex, pass.descriptor, activeFields, currentBlockDescriptors.Select(x => x.descriptor).ToList());
                 }
             }
         }
 
-        // this builds the list of properties for a Target / Graph combination
-        static PropertyCollector GetSubShaderPropertiesForTarget(Target target, GraphData graph, GenerationMode generationMode, AbstractMaterialNode outputNode, List<BlockNode> outTemporaryBlockNodes)
-        {
-            PropertyCollector subshaderProperties = new PropertyCollector();
-
-            // Collect shader properties declared by active nodes
-            using (var activeNodes = PooledHashSet<AbstractMaterialNode>.Get())
-            {
-                if (outputNode == null)
-                {
-                    // shader graph builds active nodes starting from the set of active blocks
-                    var currentBlocks = graph.GetNodes<BlockNode>();
-                    var activeBlockContext = new TargetActiveBlockContext(currentBlocks.Select(x => x.descriptor).ToList(), null);
-                    target.GetActiveBlocks(ref activeBlockContext);
-
-                    foreach (var blockFieldDesc in activeBlockContext.activeBlocks)
-                    {
-                        bool foundBlock = false;
-
-                        // attempt to get BlockNode(s) from the stack
-                        var vertBlockNode = graph.vertexContext.blocks.FirstOrDefault(x => x.value.descriptor == blockFieldDesc).value;
-                        if (vertBlockNode != null)
-                        {
-                            activeNodes.Add(vertBlockNode);
-                            foundBlock = true;
-                        }
-
-                        var fragBlockNode = graph.fragmentContext.blocks.FirstOrDefault(x => x.value.descriptor == blockFieldDesc).value;
-                        if (fragBlockNode != null)
-                        {
-                            activeNodes.Add(fragBlockNode);
-                            foundBlock = true;
-                        }
-
-                        if (!foundBlock)
-                        {
-                            // block doesn't exist (user deleted it)
-                            // create a temporary block -- don't add to graph, but use it to gather properties
-                            var block = new BlockNode();
-                            block.Init(blockFieldDesc);
-                            block.owner = graph;
-                            activeNodes.Add(block);
-
-                            // We need to make a list of all of the temporary blocks added
-                            // (This is used by the PreviewManager to generate a PreviewProperty)
-                            outTemporaryBlockNodes.Add(block);
-                        }
-                    }
-                }
-                else
-                {
-                    // preview and/or subgraphs build their active node set based on the single output node
-                    activeNodes.Add(outputNode);
-                }
-
-                PreviewManager.PropagateNodes(activeNodes, PreviewManager.PropagationDirection.Upstream, activeNodes);
-
-                // NOTE: this is NOT a deterministic ordering
-                foreach (var node in activeNodes)
-                    node.CollectShaderProperties(subshaderProperties, generationMode);
-
-                // So we sort the properties after
-                subshaderProperties.Sort();
-            }
-
-            // Collect graph properties
-            {
-                graph.CollectShaderProperties(subshaderProperties, generationMode);
-            }
-
-            // Collect shader properties declared by the Target
-            {
-                target.CollectShaderProperties(subshaderProperties, generationMode);
-            }
-
-            subshaderProperties.SetReadOnly();
-
-            return subshaderProperties;
-        }
-
-        void GenerateShaderPass(int targetIndex, PassDescriptor pass, ActiveFields activeFields, List<BlockFieldDescriptor> currentBlockDescriptors, PropertyCollector subShaderProperties)
+        void GenerateShaderPass(int targetIndex, PassDescriptor pass, ActiveFields activeFields, List<BlockFieldDescriptor> currentBlockDescriptors)
         {
             // Early exit if pass is not used in preview
-            if(m_Mode == GenerationMode.Preview && !pass.useInPreview)
+            if (m_Mode == GenerationMode.Preview && !pass.useInPreview)
                 return;
 
             // --------------------------------------------------
@@ -322,7 +225,7 @@ namespace UnityEditor.ShaderGraph
             var pixelSlots = new List<MaterialSlot>();
             var vertexSlots = new List<MaterialSlot>();
 
-            if(m_OutputNode == null)
+            if (m_OutputNode == null)
             {
                 // Update supported block list for current target implementation
                 var activeBlockContext = new TargetActiveBlockContext(currentBlockDescriptors, pass);
@@ -331,26 +234,30 @@ namespace UnityEditor.ShaderGraph
                 void ProcessStackForPass(ContextData contextData, BlockFieldDescriptor[] passBlockMask,
                     List<AbstractMaterialNode> nodeList, List<MaterialSlot> slotList)
                 {
-                    if(passBlockMask == null)
+                    if (passBlockMask == null)
                         return;
 
-                    foreach(var blockFieldDescriptor in passBlockMask)
+                    foreach (var blockFieldDescriptor in passBlockMask)
                     {
                         // Mask blocks on active state
                         // TODO: Can we merge these?
-                        if(!activeBlockContext.activeBlocks.Contains(blockFieldDescriptor))
+                        if (!activeBlockContext.activeBlocks.Contains(blockFieldDescriptor))
                             continue;
-                        
+
                         // Attempt to get BlockNode from the stack
                         var block = contextData.blocks.FirstOrDefault(x => x.value.descriptor == blockFieldDescriptor).value;
 
                         // If the BlockNode doesnt exist in the stack we need to create one
                         // TODO: Can we do the code gen without a node instance?
-                        if(block == null)
+                        if (block == null)
                         {
                             block = new BlockNode();
                             block.Init(blockFieldDescriptor);
                             block.owner = m_GraphData;
+
+                            // Add temporary blocks to m_Blocks
+                            // This is used by the PreviewManager to generate a PreviewProperty
+                            m_Blocks.Add(block);
                         }
                         // Dont collect properties from temp nodes
                         else
@@ -376,11 +283,11 @@ namespace UnityEditor.ShaderGraph
                 // Collect excess shader properties from the TargetImplementation
                 m_Targets[targetIndex].CollectShaderProperties(propertyCollector, m_Mode);
             }
-            else if(m_OutputNode is SubGraphOutputNode)
+            else if (m_OutputNode is SubGraphOutputNode)
             {
                 GenerationUtils.GetUpstreamNodesForShaderPass(m_OutputNode, pass, out vertexNodes, out pixelNodes);
                 var slot = m_OutputNode.GetInputSlots<MaterialSlot>().FirstOrDefault();
-                if(slot != null)
+                if (slot != null)
                     pixelSlots = new List<MaterialSlot>() { slot };
                 else
                     pixelSlots = new List<MaterialSlot>();
@@ -433,7 +340,7 @@ namespace UnityEditor.ShaderGraph
             // Pass Setup
 
             // Name
-            if(!string.IsNullOrEmpty(pass.displayName))
+            if (!string.IsNullOrEmpty(pass.displayName))
             {
                 spliceCommands.Add("PassName", $"Name \"{pass.displayName}\"");
             }
@@ -443,7 +350,7 @@ namespace UnityEditor.ShaderGraph
             }
 
             // Tags
-            if(!string.IsNullOrEmpty(pass.lightMode))
+            if (!string.IsNullOrEmpty(pass.lightMode))
             {
                 spliceCommands.Add("LightMode", $"\"LightMode\" = \"{pass.lightMode}\"");
             }
@@ -460,14 +367,14 @@ namespace UnityEditor.ShaderGraph
             {
                 // Render states need to be separated by RenderState.Type
                 // The first passing ConditionalRenderState of each type is inserted
-                foreach(RenderStateType type in Enum.GetValues(typeof(RenderStateType)))
+                foreach (RenderStateType type in Enum.GetValues(typeof(RenderStateType)))
                 {
                     var renderStates = pass.renderStates?.Where(x => x.descriptor.type == type);
-                    if(renderStates != null)
+                    if (renderStates != null)
                     {
-                        foreach(RenderStateCollection.Item renderState in renderStates)
+                        foreach (RenderStateCollection.Item renderState in renderStates)
                         {
-                            if(renderState.TestActive(activeFields))
+                            if (renderState.TestActive(activeFields))
                             {
                                 renderStateBuilder.AppendLine(renderState.value);
 
@@ -487,20 +394,13 @@ namespace UnityEditor.ShaderGraph
             // Pragmas
             using (var passPragmaBuilder = new ShaderStringBuilder())
             {
-                if(pass.pragmas != null)
+                if (pass.pragmas != null)
                 {
-                    foreach(PragmaCollection.Item pragma in pass.pragmas)
+                    foreach (PragmaCollection.Item pragma in pass.pragmas)
                     {
-                        if(pragma.TestActive(activeFields))
+                        if (pragma.TestActive(activeFields))
                             passPragmaBuilder.AppendLine(pragma.value);
                     }
-                }
-
-                // Enable this to turn on shader debugging
-                bool debugShader = false;
-                if (debugShader)
-                {
-                    passPragmaBuilder.AppendLine("#pragma enable_d3d11_debug_symbols");
                 }
 
                 string command = GenerationUtils.GetSpliceCommand(passPragmaBuilder.ToCodeBlock(), "PassPragmas");
@@ -540,11 +440,11 @@ namespace UnityEditor.ShaderGraph
             // Keywords
             using (var passKeywordBuilder = new ShaderStringBuilder())
             {
-                if(pass.keywords != null)
+                if (pass.keywords != null)
                 {
-                    foreach(KeywordCollection.Item keyword in pass.keywords)
+                    foreach (KeywordCollection.Item keyword in pass.keywords)
                     {
-                        if(keyword.TestActive(activeFields))
+                        if (keyword.TestActive(activeFields))
                             passKeywordBuilder.AppendLine(keyword.value);
                     }
                 }
@@ -558,13 +458,13 @@ namespace UnityEditor.ShaderGraph
             var interpolatorBuilder = new ShaderStringBuilder();
             var passStructs = new List<StructDescriptor>();
 
-            if(pass.structs != null)
+            if (pass.structs != null)
             {
                 passStructs.AddRange(pass.structs.Select(x => x.descriptor));
 
                 foreach (StructCollection.Item shaderStruct in pass.structs)
                 {
-                    if(shaderStruct.descriptor.packFields == false)
+                    if (shaderStruct.descriptor.packFields == false)
                         continue; //skip structs that do not need interpolator packs
 
                     List<int> packedCounts = new List<int>();
@@ -611,7 +511,7 @@ namespace UnityEditor.ShaderGraph
                     passStructs.Add(packStruct);
                 }
             }
-            if(interpolatorBuilder.length != 0) //hard code interpolators to float, TODO: proper handle precision
+            if (interpolatorBuilder.length != 0) //hard code interpolators to float, TODO: proper handle precision
                 interpolatorBuilder.ReplaceInCurrentMapping(PrecisionUtil.Token, ConcretePrecision.Single.ToShaderString());
             else
                 interpolatorBuilder.AppendLine("//Interpolator Packs: <None>");
@@ -619,17 +519,17 @@ namespace UnityEditor.ShaderGraph
 
             // Generated String Builders for all struct types
             var passStructBuilder = new ShaderStringBuilder();
-            if(passStructs != null)
+            if (passStructs != null)
             {
                 var structBuilder = new ShaderStringBuilder();
-                foreach(StructDescriptor shaderStruct in passStructs)
+                foreach (StructDescriptor shaderStruct in passStructs)
                 {
                     GenerationUtils.GenerateShaderStruct(shaderStruct, activeFields, out structBuilder);
                     structBuilder.ReplaceInCurrentMapping(PrecisionUtil.Token, ConcretePrecision.Single.ToShaderString()); //hard code structs to float, TODO: proper handle precision
                     passStructBuilder.Concat(structBuilder);
                 }
             }
-            if(passStructBuilder.length == 0)
+            if (passStructBuilder.length == 0)
                 passStructBuilder.AppendLine("//Pass Structs: <None>");
             spliceCommands.Add("PassStructs", passStructBuilder.ToCodeBlock());
 
@@ -675,7 +575,7 @@ namespace UnityEditor.ShaderGraph
             }
 
             // Add to splice commands
-            if(vertexBuilder.length == 0)
+            if (vertexBuilder.length == 0)
                 vertexBuilder.AppendLine("// GraphVertex: <None>");
             spliceCommands.Add("GraphVertex", vertexBuilder.ToCodeBlock());
 
@@ -719,7 +619,7 @@ namespace UnityEditor.ShaderGraph
                 pixelBuilder.AppendLines(pixelGraphFunctionBuilder.ToString());
 
                 // Add to splice commands
-                if(pixelBuilder.length == 0)
+                if (pixelBuilder.length == 0)
                     pixelBuilder.AppendLine("// GraphPixel: <None>");
                 spliceCommands.Add("GraphPixel", pixelBuilder.ToCodeBlock());
             }
@@ -737,7 +637,7 @@ namespace UnityEditor.ShaderGraph
             using (var keywordBuilder = new ShaderStringBuilder())
             {
                 keywordCollector.GetKeywordsDeclaration(keywordBuilder, m_Mode);
-                if(keywordBuilder.length == 0)
+                if (keywordBuilder.length == 0)
                     keywordBuilder.AppendLine("// GraphKeywords: <None>");
                 spliceCommands.Add("GraphKeywords", keywordBuilder.ToCodeBlock());
             }
@@ -747,8 +647,8 @@ namespace UnityEditor.ShaderGraph
 
             using (var propertyBuilder = new ShaderStringBuilder())
             {
-                subShaderProperties.GetPropertiesDeclaration(propertyBuilder, m_Mode, m_GraphData.concretePrecision);
-                if(propertyBuilder.length == 0)
+                propertyCollector.GetPropertiesDeclaration(propertyBuilder, m_Mode, m_GraphData.concretePrecision);
+                if (propertyBuilder.length == 0)
                     propertyBuilder.AppendLine("// GraphProperties: <None>");
                 spliceCommands.Add("GraphProperties", propertyBuilder.ToCodeBlock());
             }
@@ -756,12 +656,17 @@ namespace UnityEditor.ShaderGraph
             // --------------------------------------------------
             // Dots Instanced Graph Properties
 
-            bool hasDotsProperties = subShaderProperties.HasDotsProperties();
+            bool hasDotsProperties = false;
+            m_GraphData.ForeachHLSLProperty(h =>
+            {
+                if (h.declaration == HLSLDeclaration.HybridPerInstance)
+                    hasDotsProperties = true;
+            });
 
             using (var dotsInstancedPropertyBuilder = new ShaderStringBuilder())
             {
                 if (hasDotsProperties)
-                    dotsInstancedPropertyBuilder.AppendLines(subShaderProperties.GetDotsInstancingPropertiesDeclaration(m_Mode));
+                    dotsInstancedPropertyBuilder.AppendLines(propertyCollector.GetDotsInstancingPropertiesDeclaration(m_Mode));
                 else
                     dotsInstancedPropertyBuilder.AppendLine("// HybridV1InjectedBuiltinProperties: <None>");
                 spliceCommands.Add("HybridV1InjectedBuiltinProperties", dotsInstancedPropertyBuilder.ToCodeBlock());
@@ -778,7 +683,7 @@ namespace UnityEditor.ShaderGraph
                 #if !ENABLE_HYBRID_RENDERER_V2
                 if (hasDotsProperties)
                 {
-                    dotsInstancingOptionsBuilder.AppendLine("#if SHADER_TARGET >= 35 && (defined(SHADER_API_D3D11) || defined(SHADER_API_GLES3) || defined(SHADER_API_GLCORE) || defined(SHADER_API_XBOXONE)  || defined(SHADER_API_GAMECORE) || defined(SHADER_API_PSSL) || defined(SHADER_API_VULKAN) || defined(SHADER_API_METAL))");
+                    dotsInstancingOptionsBuilder.AppendLine("#if SHADER_TARGET >= 35 && (defined(SHADER_API_D3D11) || defined(SHADER_API_GLES3) || defined(SHADER_API_GLCORE) || defined(SHADER_API_XBOXONE) || defined(SHADER_API_PSSL) || defined(SHADER_API_VULKAN) || defined(SHADER_API_METAL))");
                     dotsInstancingOptionsBuilder.AppendLine("    #define UNITY_SUPPORT_INSTANCING");
                     dotsInstancingOptionsBuilder.AppendLine("#endif");
                     dotsInstancingOptionsBuilder.AppendLine("#if defined(UNITY_SUPPORT_INSTANCING) && defined(INSTANCING_ON)");
@@ -787,7 +692,7 @@ namespace UnityEditor.ShaderGraph
                 }
                 #endif
 
-                if(dotsInstancingOptionsBuilder.length == 0)
+                if (dotsInstancingOptionsBuilder.length == 0)
                     dotsInstancingOptionsBuilder.AppendLine("// DotsInstancingOptions: <None>");
                 spliceCommands.Add("DotsInstancingOptions", dotsInstancingOptionsBuilder.ToCodeBlock());
             }
@@ -799,11 +704,11 @@ namespace UnityEditor.ShaderGraph
             {
                 graphDefines.AppendLine("#define SHADERPASS {0}", pass.referenceName);
 
-                if(pass.defines != null)
+                if (pass.defines != null)
                 {
-                    foreach(DefineCollection.Item define in pass.defines)
+                    foreach (DefineCollection.Item define in pass.defines)
                     {
-                        if(define.TestActive(activeFields))
+                        if (define.TestActive(activeFields))
                             graphDefines.AppendLine(define.value);
                     }
                 }
@@ -856,7 +761,7 @@ namespace UnityEditor.ShaderGraph
 
             // Debug output all active fields
 
-            using(var debugBuilder = new ShaderStringBuilder())
+            using (var debugBuilder = new ShaderStringBuilder())
             {
                 if (isDebug)
                 {
@@ -867,7 +772,7 @@ namespace UnityEditor.ShaderGraph
                         debugBuilder.AppendLine($"//{field.tag}.{field.name}");
                     }
                 }
-                if(debugBuilder.length == 0)
+                if (debugBuilder.length == 0)
                     debugBuilder.AppendLine("// <None>");
 
                 // Add to splice commands

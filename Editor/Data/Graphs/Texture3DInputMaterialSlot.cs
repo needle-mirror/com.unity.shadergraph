@@ -42,21 +42,21 @@ namespace UnityEditor.ShaderGraph
 
         public override string GetDefaultValue(GenerationMode generationMode)
         {
-            var nodeOwner = owner as AbstractMaterialNode;
-            if (nodeOwner == null)
+            var matOwner = owner as AbstractMaterialNode;
+            if (matOwner == null)
                 throw new Exception(string.Format("Slot {0} either has no owner, or the owner is not a {1}", this, typeof(AbstractMaterialNode)));
 
-            return $"UnityBuildTexture3DStruct({nodeOwner.GetVariableNameForSlot(id)})";
+            return matOwner.GetVariableNameForSlot(id);
         }
 
         public override void AddDefaultProperty(PropertyCollector properties, GenerationMode generationMode)
         {
-            var nodeOwner = owner as AbstractMaterialNode;
-            if (nodeOwner == null)
+            var matOwner = owner as AbstractMaterialNode;
+            if (matOwner == null)
                 throw new Exception(string.Format("Slot {0} either has no owner, or the owner is not a {1}", this, typeof(AbstractMaterialNode)));
 
             var prop = new Texture3DShaderProperty();
-            prop.overrideReferenceName = nodeOwner.GetVariableNameForSlot(id);
+            prop.overrideReferenceName = matOwner.GetVariableNameForSlot(id);
             prop.modifiable = false;
             prop.generatePropertyBlock = true;
             prop.value.texture = texture;
@@ -77,10 +77,7 @@ namespace UnityEditor.ShaderGraph
         {
             var slot = foundSlot as Texture3DInputMaterialSlot;
             if (slot != null)
-            {
                 m_Texture = slot.m_Texture;
-                bareResource = slot.bareResource;
-            }
         }
     }
 

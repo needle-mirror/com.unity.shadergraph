@@ -47,8 +47,7 @@ namespace UnityEditor.ShaderGraph
         public CopyPasteGraph() {}
 
         public CopyPasteGraph(IEnumerable<GroupData> groups, IEnumerable<AbstractMaterialNode> nodes, IEnumerable<Edge> edges,
-            IEnumerable<ShaderInput> inputs, IEnumerable<AbstractShaderProperty> metaProperties, IEnumerable<ShaderKeyword> metaKeywords, IEnumerable<StickyNoteData> notes,
-            bool keepOutputEdges = false, bool removeOrphanEdges = true)
+                              IEnumerable<ShaderInput> inputs, IEnumerable<AbstractShaderProperty> metaProperties, IEnumerable<ShaderKeyword> metaKeywords, IEnumerable<StickyNoteData> notes, bool keepOutputEdges = false)
         {
             if (groups != null)
             {
@@ -104,12 +103,10 @@ namespace UnityEditor.ShaderGraph
                     AddMetaKeyword(metaKeyword);
             }
 
-            var distinct = m_Edges.Distinct();
-            if (removeOrphanEdges)
-            {
-                distinct = distinct.Where(edge => nodeSet.Contains(edge.inputSlot.node) || (keepOutputEdges && nodeSet.Contains(edge.outputSlot.node)));
-            }
-            m_Edges = distinct.ToList();
+            m_Edges = m_Edges
+                .Distinct()
+                .Where(edge => nodeSet.Contains(edge.inputSlot.node) || (keepOutputEdges && nodeSet.Contains(edge.outputSlot.node)))
+                .ToList();
         }
 
         void AddGroup(GroupData group)

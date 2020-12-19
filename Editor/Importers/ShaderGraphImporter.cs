@@ -24,9 +24,9 @@ namespace UnityEditor.ShaderGraph
     // sure that all shader graphs get re-imported. Re-importing is required,
     // because the shader graph codegen is different for V2.
     // This ifdef can be removed once V2 is the only option.
-    [ScriptedImporter(114, Extension, -902)]
+    [ScriptedImporter(108, Extension, -902)]
 #else
-    [ScriptedImporter(46, Extension, -902)]
+    [ScriptedImporter(40, Extension, -902)]
 #endif
 
     class ShaderGraphImporter : ScriptedImporter
@@ -201,16 +201,16 @@ Shader ""Hidden/GraphErrorShader2""
             }
 #endif
 
-            Texture2D texture = Resources.Load<Texture2D>("Icons/sg_graph_icon@64");
+            Texture2D texture = Resources.Load<Texture2D>("Icons/sg_graph_icon");
             ctx.AddObjectToAsset("MainAsset", mainObject, texture);
             ctx.SetMainObject(mainObject);
 
-            foreach(var target in graph.activeTargets)
+            foreach (var target in graph.activeTargets)
             {
-                if(target is IHasMetadata iHasMetadata)
+                if (target is IHasMetadata iHasMetadata)
                 {
                     var metadata = iHasMetadata.GetMetadataObject();
-                    if(metadata == null)
+                    if (metadata == null)
                         continue;
 
                     metadata.hideFlags = HideFlags.HideInHierarchy;
@@ -264,7 +264,6 @@ Shader ""Hidden/GraphErrorShader2""
                     ctx.DependsOnArtifact(asset.Key);
                 }
             }
-
         }
 
         internal static string GetShaderText(string path, out List<PropertyCollector.TextureInfo> configuredTextures, AssetCollection assetCollection, GraphData graph)
@@ -294,6 +293,7 @@ Shader ""Hidden/GraphErrorShader2""
 
             return shaderString ?? k_ErrorShader.Replace("Hidden/GraphErrorShader2", shaderName);
         }
+
         internal static string GetShaderText(string path, out List<PropertyCollector.TextureInfo> configuredTextures, AssetCollection assetCollection, out GraphData graph)
         {
             var textGraph = File.ReadAllText(path, Encoding.UTF8);
@@ -327,7 +327,7 @@ Shader ""Hidden/GraphErrorShader2""
         static ShaderGraphVfxAsset GenerateVfxShaderGraphAsset(GraphData graph)
         {
             var target = graph.activeTargets.FirstOrDefault(x => x is VFXTarget) as VFXTarget;
-            if(target == null)
+            if (target == null)
                 return null;
 
             var nl = Environment.NewLine;
@@ -431,7 +431,7 @@ Shader ""Hidden/GraphErrorShader2""
                 node.CollectShaderProperties(shaderProperties, GenerationMode.ForReals);
             }
 
-            asset.SetTextureInfos(shaderProperties.GetConfiguredTextures());
+            asset.SetTextureInfos(shaderProperties.GetConfiguredTexutres());
 
             var codeSnippets = new List<string>();
             var portCodeIndices = new List<int>[ports.Count];
@@ -511,7 +511,6 @@ Shader ""Hidden/GraphErrorShader2""
 
                 codeSnippets.Add($"// Property: {property.displayName}{nl}{builder.ToCodeBlock()}{nl}{nl}");
             }
-
 
 
             var inputStructName = $"SG_Input_{assetGuid}";
@@ -661,7 +660,7 @@ Shader ""Hidden/GraphErrorShader2""
                 }
 
                 inputProperties.Add(property);
-                codeSnippets.Add($",{nl}{indent}/* Property: {property.displayName} */ {property.GetPropertyAsArgumentStringForVFX()}");
+                codeSnippets.Add($",{nl}{indent}/* Property: {property.displayName} */ {property.GetPropertyAsArgumentString()}");
             }
 
             sharedCodeIndices.Add(codeSnippets.Count);
@@ -744,6 +743,7 @@ Shader ""Hidden/GraphErrorShader2""
 
             return asset;
         }
+
 #endif
     }
 }

@@ -38,20 +38,7 @@ namespace UnityEditor.ShaderGraph.Internal
 
         internal override string GetPropertyAsArgumentString()
         {
-            return "UnityTextureCube " + referenceName;
-        }
-
-        internal override string GetPropertyAsArgumentStringForVFX()
-        {
-            return "TEXTURECUBE(" + referenceName + ")";
-        }
-
-        internal override string GetHLSLVariableName(bool isSubgraphProperty)
-        {
-            if (isSubgraphProperty)
-                return referenceName;
-            else
-                return $"UnityBuildTextureCubeStruct({referenceName})";
+            return $"TEXTURECUBE_PARAM({referenceName}, sampler{referenceName})";
         }
 
         [SerializeField]
