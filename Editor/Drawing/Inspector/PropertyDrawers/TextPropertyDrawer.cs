@@ -10,21 +10,18 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
     [SGPropertyDrawer(typeof(string))]
     class TextPropertyDrawer : IPropertyDrawer
     {
-        public TextField textField;
-        public Label label;
-
         internal delegate void ValueChangedCallback(string newValue);
 
         internal VisualElement CreateGUI(
             ValueChangedCallback valueChangedCallback,
             string fieldToDraw,
             string labelName,
+            out VisualElement propertyTextField,
             int indentLevel = 0)
         {
-            label = PropertyDrawerUtils.CreateLabel(labelName, indentLevel);
-            var propertyRow = new PropertyRow(label);
-            textField = new TextField(512, false, false, ' ') { isDelayed = true };
-            propertyRow.Add(textField,
+            var propertyRow = new PropertyRow(PropertyDrawerUtils.CreateLabel(labelName, indentLevel));
+            propertyTextField = new TextField(512, false, false, ' ') { isDelayed = true };
+            propertyRow.Add((TextField)propertyTextField,
                 textField =>
                 {
                     textField.value = fieldToDraw;
@@ -32,6 +29,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
 
             if (valueChangedCallback != null)
             {
+                var textField = (TextField)propertyTextField;
                 textField.RegisterValueChangedCallback(evt => valueChangedCallback(evt.newValue));
             }
 
@@ -47,7 +45,8 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                 // Use the setter from the provided property as the callback
                 newStringValue => propertyInfo.GetSetMethod(true).Invoke(actualObject, new object[] {newStringValue}),
                 (string)propertyInfo.GetValue(actualObject),
-                attribute.labelName);
+                attribute.labelName,
+                out var propertyVisualElement);
         }
     }
 }

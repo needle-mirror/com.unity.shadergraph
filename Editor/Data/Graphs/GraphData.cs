@@ -283,10 +283,6 @@ namespace UnityEditor.ShaderGraph
             set => m_ConcretePrecision = value;
         }
 
-        // Some state has been changed that requires checking for the auto add/removal of blocks.
-        // This needs to be checked at a later point in time so actions like replace (remove + add) don't remove blocks.
-        internal bool checkAutoAddRemoveBlocks { get; set; }
-
         // NOTE: having preview mode default to 3D preserves the old behavior of pre-existing subgraphs
         // if we change this, we would have to introduce a versioning step if we want to maintain the old behavior
         [SerializeField]
@@ -1052,10 +1048,11 @@ namespace UnityEditor.ShaderGraph
                 throw new ArgumentException("Trying to remove an edge that does not exist.", "e");
             m_Edges.Remove(e as Edge);
 
+            BlockNode b = null;
             AbstractMaterialNode input = e.inputSlot.node, output = e.outputSlot.node;
             if (input != null && ShaderGraphPreferences.autoAddRemoveBlocks)
             {
-                checkAutoAddRemoveBlocks = true;
+                b = input as BlockNode;
             }
 
             List<IEdge> inputNodeEdges;
@@ -1068,6 +1065,19 @@ namespace UnityEditor.ShaderGraph
 
             m_AddedEdges.Remove(e);
             m_RemovedEdges.Add(e);
+            if (b != null)
+            {
+                var activeBlockDescriptors = GetActiveBlocksForAllActiveTargets();
+                if (!activeBlockDescriptors.Contains(b.descriptor))
+                {
+                    var slot = b.FindSlot<MaterialSlot>(0);
+                    if (slot.IsUsingDefaultValue()) // TODO: How to check default value
+                    {
+                        RemoveNodeNoValidate(b);
+                        input = null;
+                    }
+                }
+            }
 
             if (reevaluateActivity)
             {
@@ -1173,23 +1183,7 @@ namespace UnityEditor.ShaderGraph
             collector.CalculateKeywordPermutations();
         }
 
-        // adds the input to the graph, and sanitizes the names appropriately
         public void AddGraphInput(ShaderInput input, int index = -1)
-        {
-            if (input == null)
-                return;
-
-            // sanitize the display name
-            input.SetDisplayNameAndSanitizeForGraph(this);
-
-            // sanitize the reference name
-            input.SetReferenceNameAndSanitizeForGraph(this);
-
-            AddGraphInputNoSanitization(input, index);
-        }
-
-        // just adds the input to the graph, does not fix colliding or illegal names
-        internal void AddGraphInputNoSanitization(ShaderInput input, int index = -1)
         {
             if (input == null)
                 return;
@@ -1274,91 +1268,46 @@ namespace UnityEditor.ShaderGraph
             return result;
         }
 
-        public string SanitizeGraphInputName(ShaderInput input, string desiredName)
+        public void SanitizeGraphInputName(ShaderInput input)
         {
-            string currentName = input.displayName;
-            string sanitizedName = desiredName.Trim();
+            input.displayName = input.displayName.Trim();
             switch (input)
             {
                 case AbstractShaderProperty property:
-                    sanitizedName = GraphUtil.SanitizeName(BuildPropertyDisplayNameList(property, currentName), "{0} ({1})", sanitizedName);
+                    input.displayName = GraphUtil.SanitizeName(BuildPropertyDisplayNameList(property, input.displayName), "{0} ({1})", input.displayName);
                     break;
                 case ShaderKeyword keyword:
-                    sanitizedName = GraphUtil.SanitizeName(keywords.Where(p => p != input).Select(p => p.displayName), "{0} ({1})", sanitizedName);
+                    input.displayName = GraphUtil.SanitizeName(keywords.Where(p => p != input).Select(p => p.displayName), "{0} ({1})", input.displayName);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-            return sanitizedName;
         }
 
-        public string SanitizeGraphInputReferenceName(ShaderInput input, string desiredName)
+        public void SanitizeGraphInputReferenceName(ShaderInput input, string newName)
         {
-            var sanitizedName = NodeUtils.ConvertToValidHLSLIdentifier(desiredName, NodeUtils.IsShaderLabKeyWord);
+            if (string.IsNullOrEmpty(newName))
+                return;
 
+            string name = newName.Trim();
+            if (string.IsNullOrEmpty(name))
+                return;
+
+            if (Regex.IsMatch(name, @"^\d+"))
+                name = "_" + name;
+
+            name = Regex.Replace(name, @"(?:[^A-Za-z_0-9])|(?:\s)", "_");
             switch (input)
             {
                 case AbstractShaderProperty property:
-                {
-                    // must deduplicate ref names against both keyword and properties, as they occupy the same name space
-                    var existingNames = properties.Where(p => p != property).Select(p => p.referenceName).Union(keywords.Select(p => p.referenceName));
-                    sanitizedName = GraphUtil.DeduplicateName(existingNames, "{0}_{1}", sanitizedName);
-                }
-                break;
+                    property.overrideReferenceName = GraphUtil.SanitizeName(properties.Where(p => p != property).Select(p => p.referenceName), "{0}_{1}", name);
+                    break;
                 case ShaderKeyword keyword:
-                {
-                    // must deduplicate ref names against both keyword and properties, as they occupy the same name space
-                    sanitizedName = sanitizedName.ToUpper();
-                    var existingNames = properties.Select(p => p.referenceName).Union(keywords.Where(p => p != input).Select(p => p.referenceName));
-                    sanitizedName = GraphUtil.DeduplicateName(existingNames, "{0}_{1}", sanitizedName);
-                }
-                break;
+                    keyword.overrideReferenceName = GraphUtil.SanitizeName(keywords.Where(p => p != input).Select(p => p.referenceName), "{0}_{1}", name).ToUpper();
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-            return sanitizedName;
-        }
-
-        // copies the ShaderInput, and adds it to the graph with proper name sanitization, returning the copy
-        public ShaderInput AddCopyOfShaderInput(ShaderInput source, int insertIndex = -1)
-        {
-            ShaderInput copy = source.Copy();
-
-            // some ShaderInputs cannot be copied (unknown types)
-            if (copy == null)
-                return null;
-
-            // copy common properties that should always be copied over
-            copy.generatePropertyBlock = source.generatePropertyBlock;      // the exposed toggle
-
-            if ((source is AbstractShaderProperty sourceProp) && (copy is AbstractShaderProperty copyProp))
-            {
-                copyProp.hidden = sourceProp.hidden;
-                copyProp.precision = sourceProp.precision;
-                copyProp.overrideHLSLDeclaration = sourceProp.overrideHLSLDeclaration;
-                copyProp.hlslDeclarationOverride = sourceProp.hlslDeclarationOverride;
-            }
-
-            // sanitize the display name (we let the .Copy() function actually copy the display name over)
-            copy.SetDisplayNameAndSanitizeForGraph(this);
-
-            // copy and sanitize the reference name (must do this after the display name, so the default is correct)
-            if (source.IsUsingNewDefaultRefName())
-            {
-                // if source was using new default, we can just rely on the default for the copy we made.
-                // the code above has already handled collisions properly for the default,
-                // and it will assign the same name as the source if there are no collisions.
-                // Also it will result better names chosen when there are collisions.
-            }
-            else
-            {
-                // when the source is using an old default, we set it as an override
-                copy.SetReferenceNameAndSanitizeForGraph(this, source.referenceName);
-            }
-
-            AddGraphInputNoSanitization(copy, insertIndex);
-
-            return copy;
         }
 
         public void RemoveGraphInput(ShaderInput input)
@@ -1608,11 +1557,11 @@ namespace UnityEditor.ShaderGraph
             }
             foreach (var otherProperty in other.properties)
             {
-                AddGraphInputNoSanitization(otherProperty);
+                AddGraphInput(otherProperty);
             }
             foreach (var otherKeyword in other.keywords)
             {
-                AddGraphInputNoSanitization(otherKeyword);
+                AddGraphInput(otherKeyword);
             }
 
             other.ValidateGraph();
@@ -1730,9 +1679,7 @@ namespace UnityEditor.ShaderGraph
                 position.y += 30;
 
                 StickyNoteData pastedStickyNote = new StickyNoteData(stickyNote.title, stickyNote.content, position);
-                pastedStickyNote.textSize = stickyNote.textSize;
-                pastedStickyNote.theme = stickyNote.theme;
-                if (stickyNote.group != null && groupMap.ContainsKey(stickyNote.group))
+                if (groupMap.ContainsKey(stickyNote.group))
                 {
                     pastedStickyNote.group = groupMap[stickyNote.group];
                 }
@@ -1817,6 +1764,8 @@ namespace UnityEditor.ShaderGraph
                     }
                     else
                     {
+                        SanitizeGraphInputName(keywordNode.keyword);
+                        SanitizeGraphInputReferenceName(keywordNode.keyword, keywordNode.keyword.overrideReferenceName);
                         AddGraphInput(keywordNode.keyword);
                     }
 
@@ -1845,7 +1794,7 @@ namespace UnityEditor.ShaderGraph
 
         static T DeserializeLegacy<T>(string typeString, string json, Guid? overrideObjectId = null) where T : JsonObject
         {
-            var jsonObj = MultiJsonInternal.CreateInstanceForDeserialization(typeString);
+            var jsonObj = MultiJsonInternal.CreateInstance(typeString);
             var value = jsonObj as T;
             if (value == null)
             {
@@ -1865,7 +1814,7 @@ namespace UnityEditor.ShaderGraph
 
         static AbstractMaterialNode DeserializeLegacyNode(string typeString, string json, Guid? overrideObjectId = null)
         {
-            var jsonObj = MultiJsonInternal.CreateInstanceForDeserialization(typeString);
+            var jsonObj = MultiJsonInternal.CreateInstance(typeString);
             var value = jsonObj as AbstractMaterialNode;
             if (value == null)
             {

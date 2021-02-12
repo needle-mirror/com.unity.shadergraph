@@ -72,8 +72,6 @@ namespace UnityEditor.ShaderGraph.Serialization
 
         public virtual void OnBeforeSerialize() {}
 
-        public virtual void OnBeforeDeserialize() {}
-
         public virtual void OnAfterDeserialize() {}
 
         public virtual void OnAfterDeserialize(string json) {}

@@ -56,7 +56,9 @@ namespace UnityEditor.ShaderGraph.Internal
             return new BooleanShaderProperty()
             {
                 displayName = displayName,
+                hidden = hidden,
                 value = value,
+                precision = precision,
             };
         }
     }

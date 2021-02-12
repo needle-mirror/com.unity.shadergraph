@@ -4,11 +4,14 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [12.0.0] - 2021-01-11
+
+Version Updated
+The version number for this package has increased due to a version update of a related graphics package.
+
 ## [11.0.0] - 2020-10-21
 
 ### Added
-- Added subshadergraphs for SpeedTree 8 shadergraph support: SpeedTree8Wind, SpeedTree8ColorAlpha, SpeedTree8Billboard.
-- Added an HLSL file implementing a version of the Unity core LODDitheringTransition function which can be used in a Shader Graph
 
 ### Changed
 
@@ -22,28 +25,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed an issue where blackboard wasn't resizable from all directions like the Inspector and Main Preview
 - Fixed an issue where deleting a property node while your mouse is over it leaves the property highlighted in the blackboard [1238635]
 - Fixed an issue where Float/Vector1 properties did not have the ability to be edited using a slider in the Inspector like the other Vector types
-- Fixed an issue with the Gradient color picker displaying different values than the selected color.
 - Fixed an issue with inactive node deletion throwing a superfluous exception.
-- Fixed an issue on upgrading graphs with inactive Master Nodes causing null ref errors. [1298867](https://issuetracker.unity3d.com/product/unity/issues/guid/1298867/)
-- Fixed the ViewDirection Node in Tangent space's calculation to match how the transform node works.
-- Boolean keywords now have no longer require their reference name to end in _ON to show up in the Material inspector [1306820] (https://issuetracker.unity3d.com/product/unity/issues/guid/1306820/)
-- Newly created properties and keywords will no longer use obfuscated GUID-based reference names in the shader code [1300484]
+- Fixed an issue where interpolators with preprocessors were being packed incorrectly.
+- Fixed rounded rectangle shape not rendering correctly on Nintendo Switch.
 - Fixed an issue where generated `BuildVertexDescriptionInputs()` produced an HLSL warning, "implicit truncation of vector type" [1299179](https://issuetracker.unity3d.com/product/unity/issues/guid/1299179/)
-- Fixed issue with SRP Batcher compatibility [1310624]
-- Fixed issue with Hybrid renderer compatibility [1296776]
-- Fixed the Custom Editor GUI field in the Graph settings that was ignored.
-- Fixed an issue where SampleRawCubemapNode were requiring the Normal in Object space instead of World space [1307962]
-- Fixed a bug in master node preview generation that failed compilation when a block was deleted [1319066] (https://issuetracker.unity3d.com/issues/shadergraph-deleting-stack-blocks-of-universal-rp-targeted-shadergraph-causes-the-main-preview-to-fail-to-compile)
-- Fixed a bug where property deduplication was failing and spamming errors [1317809] (https://issuetracker.unity3d.com/issues/console-error-when-adding-a-sample-texture-operator-when-a-sampler-state-property-is-present-in-blackboard)
-- Fixed a bug where synchronously compiling an unencountered shader variant for preview was causing long delays in graph updates [1324429]
-- Fixed a issue when clicking a property in subgraph blackboard will throw null exception errors.[1328377](https://issuetracker.unity3d.com/product/unity/issues/guid/1328377/)
-- Fixed an issue where an integer property would be exposed in the material inspector as a float [1332563]
-- Fixed an issue where upgrading from an older version of ShaderGraph would cause Enum keywords to be not exposed [1332510]
-- Fixed a bug in ShaderGraph where sticky notes couldn't be copied and pasted [1221042].
-- Fixed SubGraph SamplerState property defaults not being respected [1336119]
-- Fixed an issue where nested subgraphs with identical SamplerState property settings could cause compile failures [1336089]
-- Fixed an issue where SamplerState properties could not be renamed after creation [1336126]
-- Fixed a ShaderGraph issue where unused blocks get removed on edge replacement [1336832].
+- Fixed an issue on upgrading graphs with inactive Master Nodes causing null ref errors. [1298867](https://issuetracker.unity3d.com/product/unity/issues/guid/1298867/)
+- Fixed an issue with duplicating a node with the blackboard closed [1294430](https://issuetracker.unity3d.com/product/unity/issues/guid/1294430/)
+- Fixed an issue where ShaderGraph stopped responding after selecting a node after opening the graph with the inspector window hidden [1304501](https://issuetracker.unity3d.com/issues/shadergraph-graph-is-unusable-if-opened-with-graph-inspector-disabled-throws-errors)
 
 ## [10.3.0] - 2020-11-03
 
@@ -64,19 +52,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed an issue where the shader graph inspector window could be resized past the edges of the shader graph view
 - Fixed an issue where resizing the shader graph inspector window sometimes had unexpected results
 - Fixed Graph Inspector scaling that was allocating too much space to the labels [1268134]
-- Fixed an issue on upgrading graphs with inactive Master Nodes causing null ref errors. [1298867](https://issuetracker.unity3d.com/product/unity/issues/guid/1298867/)
-- Fixed an issue where blackboard properties when dragged wouldn't scroll the list of properties to show the user more of the property list [1293632]
-- Fixed an issue where, when blackboard properties were dragged and then the user hit the "Escape" key, the drag indicator would still be visible
-- Fixed an issue where renaming blackboard properties through the Blackboard wouldn't actually change the underlying property name
-- Fixed an issue where blackboard wasn't resizable from all directions like the Inspector and Main Preview
-- Fixed an issue where deleting a property node while your mouse is over it leaves the property highlighted in the blackboard [1238635]
-- Fixed an issue where Float/Vector1 properties did not have the ability to be edited using a slider in the Inspector like the other Vector types
 - Fixed some issues with our Convert To Subgraph contextual menu to allow passthrough and fix inputs/outputs getting lost.
 - Fixed issue where a NullReferenceException would be thrown on resetting reference name for a Shader Graph property
 - Fixed an upgrade issue where old ShaderGraph files with a weird/bugged state would break on update to master stack [1255011]
 - Fixed a bug where non-word characters in an enum keyword reference name would break the graph. [1270168](https://issuetracker.unity3d.com/product/unity/issues/guid/1270168)
 - Fixed issue where a NullReferenceException would be thrown on resetting reference name for a Shader Graph property
-- Fixed an issue with the Gradient color picker displaying different values than the selected color.
 
 ## [10.2.0] - 2020-10-19
 

@@ -105,7 +105,9 @@ namespace UnityEditor.ShaderGraph
             return new GradientShaderProperty
             {
                 displayName = displayName,
+                hidden = hidden,
                 value = value,
+                precision = precision
             };
         }
     }

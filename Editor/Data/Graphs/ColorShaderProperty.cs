@@ -50,7 +50,7 @@ namespace UnityEditor.ShaderGraph.Internal
             action(new HLSLProperty(HLSLType._float4, referenceName, decl, concretePrecision));
         }
 
-        public override string GetOldDefaultReferenceName()
+        public override string GetDefaultReferenceName()
         {
             return $"Color_{objectId}";
         }
@@ -96,8 +96,12 @@ namespace UnityEditor.ShaderGraph.Internal
             {
                 sgVersion = sgVersion,
                 displayName = displayName,
+                hidden = hidden,
                 value = value,
                 colorMode = colorMode,
+                precision = precision,
+                overrideHLSLDeclaration = overrideHLSLDeclaration,
+                hlslDeclarationOverride = hlslDeclarationOverride
             };
         }
 

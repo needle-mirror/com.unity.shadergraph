@@ -39,11 +39,6 @@ namespace UnityEditor.ShaderGraph.Internal
             return "UnityTexture2DArray " + referenceName;
         }
 
-        internal override string GetPropertyAsArgumentStringForVFX()
-        {
-            return "TEXTURE2D_ARRAY(" + referenceName + ")";
-        }
-
         internal override string GetHLSLVariableName(bool isSubgraphProperty)
         {
             if (isSubgraphProperty)
@@ -80,7 +75,9 @@ namespace UnityEditor.ShaderGraph.Internal
             return new Texture2DArrayShaderProperty()
             {
                 displayName = displayName,
+                hidden = hidden,
                 value = value,
+                precision = precision,
             };
         }
     }

@@ -44,6 +44,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
             blackboard = new SGBlackboard(associatedGraphView)
             {
                 subTitle = FormatPath(graph.path),
+                editTextRequested = EditTextRequested,
                 addItemRequested = AddItemRequested,
                 moveItemRequested = MoveItemRequested
             };
@@ -261,7 +262,23 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
             }
             else
             {
-                gm.AddItem(new GUIContent($"Keyword/{keyword.displayName}"), false, () => AddInputRow(m_Graph.AddCopyOfShaderInput(keyword)));
+                gm.AddItem(new GUIContent($"Keyword/{keyword.displayName}"), false, () => AddInputRow(keyword.Copy(), true));
+            }
+        }
+
+        void EditTextRequested(SGBlackboard blackboard, VisualElement visualElement, string newText)
+        {
+            var field = (BlackboardFieldView)visualElement;
+            var input = (ShaderInput)field.userData;
+            if (!string.IsNullOrEmpty(newText) && newText != input.displayName)
+            {
+                m_Graph.owner.RegisterCompleteObjectUndo("Edit Graph Input Name");
+                input.displayName = newText;
+                m_Graph.SanitizeGraphInputName(input);
+                field.text = input.displayName;
+                // need to trigger the inspector update to match
+                field.InspectorUpdateTrigger();
+                DirtyNodes();
             }
         }
 
@@ -320,21 +337,15 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
         // This data is used to re-select the shaderInputs in the blackboard after an undo/redo is performed
         Dictionary<string, string> oldSelectionPersistenceData { get; set; } = new Dictionary<string, string>();
 
-        void AddInputRow(ShaderInput input, bool addToGraph = false, int index = -1)
+        void AddInputRow(ShaderInput input, bool create = false, int index = -1)
         {
             if (m_InputRows.ContainsKey(input))
                 return;
 
-            if (addToGraph)
+            if (create)
             {
-                m_Graph.owner.RegisterCompleteObjectUndo("Create Graph Input");
-
-                // this pathway is mostly used for adding newly inputs to the graph
-                // so this is setting up the default state for those inputs
-                // here we flag it exposed, if the input type is exposable
+                m_Graph.SanitizeGraphInputName(input);
                 input.generatePropertyBlock = input.isExposable;
-
-                m_Graph.AddGraphInput(input);       // TODO: index after currently selected property
             }
 
             BlackboardFieldView field = null;
@@ -344,7 +355,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
             {
                 case AbstractShaderProperty property:
                 {
-                    var icon = (m_Graph.isSubGraph || property.isExposed) ? exposedIcon : null;
+                    var icon = (m_Graph.isSubGraph || (property.isExposable && property.generatePropertyBlock)) ? exposedIcon : null;
                     field = new BlackboardFieldView(m_Graph, property, icon, property.displayName, property.GetPropertyTypeString()) { userData = property };
                     field.RegisterCallback<AttachToPanelEvent>(UpdateSelectionAfterUndoRedo);
                     property.onBeforeVersionChange += (_) => m_Graph.owner.RegisterCompleteObjectUndo($"Change {property.displayName} Version");
@@ -369,7 +380,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
                 }
                 case ShaderKeyword keyword:
                 {
-                    var icon = (m_Graph.isSubGraph || keyword.isExposed) ? exposedIcon : null;
+                    var icon = (m_Graph.isSubGraph || (keyword.isExposable && keyword.generatePropertyBlock)) ? exposedIcon : null;
 
                     string typeText = keyword.keywordType.ToString()  + " Keyword";
                     typeText = keyword.isBuiltIn ? "Built-in " + typeText : typeText;
@@ -406,14 +417,17 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
 
             m_InputRows[input] = row;
 
-            if (!addToGraph)
+            if (!create)
             {
                 m_InputRows[input].expanded = SessionState.GetBool($"Unity.ShaderGraph.Input.{input.objectId}.isExpanded", false);
             }
             else
             {
                 row.expanded = true;
+                m_Graph.owner.RegisterCompleteObjectUndo("Create Graph Input");
+                m_Graph.AddGraphInput(input);
                 field.OpenTextEditor();
+
                 if (input as ShaderKeyword != null)
                 {
                     m_Graph.OnKeywordChangedNoValidate();
@@ -425,8 +439,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
         {
             var newFieldView = evt.target as BlackboardFieldView;
             // If this field view represents a value that was previously selected
-            var refName = newFieldView?.shaderInput?.referenceName;
-            if (refName != null && oldSelectionPersistenceData.TryGetValue(refName, out var oldViewDataKey))
+            if (oldSelectionPersistenceData.TryGetValue(newFieldView?.shaderInput.referenceName, out var oldViewDataKey))
             {
                 // ViewDataKey is how UIElements handles UI state persistence,
                 // This selects the newly added field view
@@ -454,6 +467,15 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
                 return m_InputRows[input];
             else
                 return null;
+        }
+
+        // Clear any rows that are currently highlighted due to mouse hovering over PropertyNodeViews in the graph
+        public void ClearHighlightedRows()
+        {
+            foreach (var row in m_InputRows)
+            {
+                row.Value.RemoveFromClassList("hovered");
+            }
         }
 
         void OnMouseHover(EventBase evt, ShaderInput input)

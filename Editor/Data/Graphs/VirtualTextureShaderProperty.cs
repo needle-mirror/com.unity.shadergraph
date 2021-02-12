@@ -75,7 +75,7 @@ namespace UnityEditor.ShaderGraph
             int numLayers = value.layers.Count;
             if (numLayers > 0)
             {
-                action(new HLSLProperty(HLSLType._CUSTOM, referenceName + "_CBDecl", HLSLDeclaration.UnityPerMaterial, concretePrecision)
+                action(new HLSLProperty(HLSLType._CUSTOM, referenceName, HLSLDeclaration.UnityPerMaterial, concretePrecision)
                 {
                     customDeclaration = (ssb) =>
                     {
@@ -132,7 +132,7 @@ namespace UnityEditor.ShaderGraph
                     builder.AppendNewLine();
                 };
 
-                action(new HLSLProperty(HLSLType._CUSTOM, referenceName + "_Global", HLSLDeclaration.Global, concretePrecision)
+                action(new HLSLProperty(HLSLType._CUSTOM, referenceName, HLSLDeclaration.Global, concretePrecision)
                 {
                     customDeclaration = customDecl
                 });
@@ -165,7 +165,9 @@ namespace UnityEditor.ShaderGraph
             var vt =  new VirtualTextureShaderProperty
             {
                 displayName = displayName,
+                hidden = hidden,
                 value = new SerializableVirtualTexture(),
+                precision = precision
             };
 
             // duplicate layer data, but reset reference names (they should be unique)
@@ -184,13 +186,11 @@ namespace UnityEditor.ShaderGraph
             {
                 string layerRefName = value.layers[layer].layerRefName;
                 var layerTexture = value.layers[layer].layerTexture;
-                var texture = layerTexture != null ? layerTexture.texture : null;
 
                 var textureInfo = new PropertyCollector.TextureInfo
                 {
                     name = layerRefName,
-                    textureId = texture != null ? texture.GetInstanceID() : 0,
-                    dimension = texture != null ? texture.dimension : UnityEngine.Rendering.TextureDimension.Any,
+                    textureId = (layerTexture != null && layerTexture.texture != null) ? layerTexture.texture.GetInstanceID() : 0,
                     modifiable = true
                 };
                 infos.Add(textureInfo);

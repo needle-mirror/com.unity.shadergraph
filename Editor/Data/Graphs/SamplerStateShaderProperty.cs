@@ -16,24 +16,24 @@ namespace UnityEditor.ShaderGraph
 
         public override PropertyType propertyType => PropertyType.SamplerState;
 
-        // Sampler States cannot be exposed on a Material
         internal override bool isExposable => false;
+        internal override bool isRenamable => false;
 
-        // subgraph Sampler States can be renamed
-        // just the actual properties they create will always have fixed names
-        internal override bool isRenamable => true;
-
-        internal override bool isReferenceRenamable => false;
-
-        // this is the fixed naming scheme for actual samplerstates properties
-        string propertyReferenceName => value.defaultPropertyName;
-        public override string referenceNameForEditing => propertyReferenceName;
+        public override TextureSamplerState value
+        {
+            get => base.value;
+            set
+            {
+                overrideReferenceName = $"SamplerState_{value.filter}_{value.wrap}";
+                base.value = value;
+            }
+        }
 
         internal override bool AllowHLSLDeclaration(HLSLDeclaration decl) => false; // disable UI, nothing to choose
 
         internal override void ForeachHLSLProperty(Action<HLSLProperty> action)
         {
-            action(new HLSLProperty(HLSLType._SamplerState, propertyReferenceName, HLSLDeclaration.Global));
+            action(new HLSLProperty(HLSLType._SamplerState, referenceName, HLSLDeclaration.Global));
         }
 
         internal override string GetPropertyAsArgumentString()
@@ -46,7 +46,7 @@ namespace UnityEditor.ShaderGraph
             if (isSubgraphProperty)
                 return referenceName;
             else
-                return $"UnityBuildSamplerStateStruct({propertyReferenceName})";
+                return $"UnityBuildSamplerStateStruct({referenceName})";
         }
 
         internal override AbstractMaterialNode ToConcreteNode()
@@ -68,24 +68,11 @@ namespace UnityEditor.ShaderGraph
             return new SamplerStateShaderProperty()
             {
                 displayName = displayName,
+                hidden = hidden,
+                overrideReferenceName = overrideReferenceName,
                 value = value,
+                precision = precision,
             };
-        }
-
-        public override int latestVersion => 1;
-        public override void OnAfterDeserialize(string json)
-        {
-            if (sgVersion == 0)
-            {
-                // we no longer require forced reference names on sampler state properties
-                // as we enforce custom property naming by simply not using the reference name
-                // this allows us to use the real reference name for subgraph parameters
-                // however we must clear out the old reference name first (as it was always hard-coded)
-                // this will fallback to the default ref name
-                overrideReferenceName = null;
-                var unused = referenceName;
-                ChangeVersion(1);
-            }
         }
     }
 }

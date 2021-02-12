@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
 
 namespace UnityEditor.ShaderGraph
@@ -39,8 +38,5 @@ namespace UnityEditor.ShaderGraph
         {
             this.customEditorForRenderPipelines.Add((shaderGUI, renderPipelineAssetType.FullName));
         }
-
-        public bool HasCustomEditorForRenderPipeline(Type renderPipelineAssetType)
-            => this.customEditorForRenderPipelines.Any(c => c.renderPipelineAssetType == renderPipelineAssetType.FullName);
     }
 }
