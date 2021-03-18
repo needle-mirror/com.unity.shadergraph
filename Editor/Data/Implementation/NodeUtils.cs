@@ -140,7 +140,7 @@ namespace UnityEditor.Graphing
                 nodeList.Add(node);
         }
 
-        internal static List<AbstractMaterialNode> GetParentNodes(AbstractMaterialNode node)
+        private static List<AbstractMaterialNode> GetParentNodes(AbstractMaterialNode node)
         {
             List<AbstractMaterialNode> nodeList = new List<AbstractMaterialNode>();
             var ids = node.GetInputSlots<MaterialSlot>().Select(x => x.id);
@@ -482,16 +482,12 @@ namespace UnityEditor.Graphing
             var graph = initialSlot.owner.owner;
             s_SlotStack.Clear();
             s_SlotStack.Push(initialSlot);
-            ShaderStageCapability capabilities = ShaderStageCapability.All;
             while (s_SlotStack.Any())
             {
                 var slot = s_SlotStack.Pop();
-
-                // Clear any stages from the total capabilities that this slot doesn't support (e.g. if this is vertex, clear pixel)
-                capabilities &= slot.stageCapability;
-                // Can early out if we know nothing is compatible, otherwise we have to keep checking everything we can reach.
-                if (capabilities == ShaderStageCapability.None)
-                    return capabilities;
+                ShaderStage stage;
+                if (slot.stageCapability.TryGetShaderStage(out stage))
+                    return slot.stageCapability;
 
                 if (goingBackwards && slot.isInputSlot)
                 {
@@ -521,7 +517,7 @@ namespace UnityEditor.Graphing
                 }
             }
 
-            return capabilities;
+            return ShaderStageCapability.All;
         }
 
         public static string GetSlotDimension(ConcreteSlotValueType slotValue)
@@ -848,16 +844,6 @@ namespace UnityEditor.Graphing
             "while"
         };
 
-        static HashSet<string> m_ShaderGraphKeywords = new HashSet<string>()
-        {
-            "Gradient",
-            "UnitySamplerState",
-            "UnityTexture2D",
-            "UnityTexture2DArray",
-            "UnityTexture3D",
-            "UnityTextureCube"
-        };
-
         static bool m_HLSLKeywordDictionaryBuilt = false;
 
         public static bool IsHLSLKeyword(string id)
@@ -880,12 +866,6 @@ namespace UnityEditor.Graphing
         {
             bool isShaderLabKeyword = m_ShaderLabKeywords.Contains(id.ToLower());
             return isShaderLabKeyword;
-        }
-
-        public static bool IsShaderGraphKeyWord(string id)
-        {
-            bool isShaderGraphKeyword = m_ShaderGraphKeywords.Contains(id);
-            return isShaderGraphKeyword;
         }
 
         public static string ConvertToValidHLSLIdentifier(string originalId, Func<string, bool> isDisallowedIdentifier = null)
@@ -963,7 +943,7 @@ namespace UnityEditor.Graphing
         public static bool ValidateSlotName(string inName, out string errorMessage)
         {
             //check for invalid characters between display safe and hlsl safe name
-            if (GetDisplaySafeName(inName) != GetHLSLSafeName(inName) && GetDisplaySafeName(inName) != ConvertToValidHLSLIdentifier(inName))
+            if (GetDisplaySafeName(inName) != GetHLSLSafeName(inName))
             {
                 errorMessage = "Slot name(s) found invalid character(s). Valid characters: A-Z, a-z, 0-9, _ ( ) ";
                 return true;

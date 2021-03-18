@@ -19,14 +19,15 @@ HelpBoxRow > #container > #content {
     justify-content: center;
 }
 
-HelpBoxRow
+HelpBoxRow > *
 {
+    color:#584308;
     white-space: normal;
 }
 
 .help-box-row-style-info
 {
-    background-color: #474747;
+    background-color: #6ed7fc;
 }
 
 .help-box-row-style-info #label
@@ -52,14 +53,4 @@ HelpBoxRow
 .help-box-row-style-error #label
 {
     background-image : resource("console.erroricon");
-}
-
-#message-warn
-{
-    color:#584308;
-}
-
-#message-info
-{
-    color:#d2d2d2;
 }

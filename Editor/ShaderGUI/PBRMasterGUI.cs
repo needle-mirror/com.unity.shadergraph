@@ -7,14 +7,13 @@ namespace UnityEditor.ShaderGraph
     {
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
         {
-            Material material = materialEditor.target as Material;
-
             materialEditor.PropertiesDefaultGUI(props);
 
-            // Change the GI emission flag and fix it up with emissive as black if necessary.
-            if (material.HasColor("_EmissionColor"))
+            Material material = materialEditor.target as Material;
+
+            if (materialEditor.EmissionEnabledProperty())
             {
-                materialEditor.LightmapEmissionFlagsProperty(MaterialEditor.kMiniTextureFieldLabelIndentLevel, true);
+                material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.BakedEmissive;
             }
         }
     }

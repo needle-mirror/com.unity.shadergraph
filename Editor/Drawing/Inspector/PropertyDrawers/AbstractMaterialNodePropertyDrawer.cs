@@ -38,15 +38,6 @@ namespace  UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
             nodeSettings.Add(nameLabel);
             if (node.sgVersion < node.latestVersion)
             {
-                string deprecationText = null;
-                string buttonText = null;
-                string labelText = null;
-                MessageType messageType = MessageType.Warning;
-                if (node is IHasCustomDeprecationMessage nodeWithCustomDeprecationSettings)
-                {
-                    nodeWithCustomDeprecationSettings.GetCustomDeprecationMessage(out deprecationText, out buttonText, out labelText, out messageType);
-                }
-
                 var help = HelpBoxRow.TryGetDeprecatedHelpBoxRow($"{node.name} Node", () =>
                 {
                     m_setNodesAsDirtyCallback?.Invoke();
@@ -55,7 +46,7 @@ namespace  UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                     inspectorUpdateDelegate?.Invoke();
                     m_updateNodeViewsCallback?.Invoke();
                     node.Dirty(ModificationScope.Graph);
-                }, deprecationText, buttonText, labelText, messageType);
+                });
 
                 if (help != null)
                 {

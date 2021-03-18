@@ -47,30 +47,18 @@ namespace UnityEditor.ShaderGraph.Drawing
             hierarchy.Add(container);
         }
 
-        public static VisualElement TryGetDeprecatedHelpBoxRow(string deprecatedTypeName, Action upgradeAction, string deprecationText = null, string buttonText = null, string labelText = null, MessageType messageType = MessageType.Warning)
+        public static VisualElement TryGetDeprecatedHelpBoxRow(string deprecatedTypeName, Action upgradeAction)
         {
-            if (deprecationText == null)
+            string depString = $"The {deprecatedTypeName} has new updates. This version maintains the old behavior. " +
+                $"If you update a {deprecatedTypeName}, you can use Undo to change it back. See the {deprecatedTypeName} " +
+                $"documentation for more information.";
+            Button upgradeButton = new Button(upgradeAction) { text = "Update" , tooltip = depString};
+            if (!ShaderGraphPreferences.allowDeprecatedBehaviors)
             {
-                deprecationText = $"The {deprecatedTypeName} has new updates. This version maintains the old behavior. " +
-                    $"If you update a {deprecatedTypeName}, you can use Undo to change it back. See the {deprecatedTypeName} " +
-                    $"documentation for more information.";
-            }
-            if (buttonText == null)
-            {
-                buttonText = "Update";
-            }
-            if (labelText == null)
-            {
-                labelText = "DEPRECATED: Hover for info";
-            }
-
-            Button upgradeButton = new Button(upgradeAction) { text = buttonText , tooltip = deprecationText};
-            if (!ShaderGraphPreferences.allowDeprecatedBehaviors || messageType == MessageType.Info)
-            {
-                HelpBoxRow help = new HelpBoxRow(messageType);
-                var label = new Label(labelText)
+                HelpBoxRow help = new HelpBoxRow(MessageType.Warning);
+                var label = new Label("DEPRECATED: Hover for info")
                 {
-                    tooltip = deprecationText, name = "message-" + (messageType == MessageType.Warning ? "warn" : "info")
+                    tooltip = depString
                 };
                 help.Add(label);
                 help.contentContainer.Add(upgradeButton);
