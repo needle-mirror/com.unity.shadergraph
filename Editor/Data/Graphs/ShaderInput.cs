@@ -156,8 +156,6 @@ namespace UnityEditor.ShaderGraph.Internal
             }
         }
 
-        public virtual string referenceNameForEditing => referenceName;
-
         public override void OnBeforeDeserialize()
         {
             // if serialization doesn't write to m_DefaultRefNameVersion, then it is an old shader input, and should use the old default naming scheme
@@ -222,7 +220,6 @@ namespace UnityEditor.ShaderGraph.Internal
 
         // this controls whether the UI allows the user to rename the display and reference names
         internal abstract bool isRenamable { get; }
-        internal virtual bool isReferenceRenamable => isRenamable;
 
         internal abstract ShaderInput Copy();
     }

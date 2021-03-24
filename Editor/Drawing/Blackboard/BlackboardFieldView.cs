@@ -152,7 +152,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
                     "Reset Reference",
                     e =>
                     {
-                        m_ResetReferenceNameAction?.Invoke();
+                        m_ResetReferenceNameAction();
                         DirtyNodes(ModificationScope.Graph);
                     },
                     DropdownMenuAction.AlwaysEnabled);

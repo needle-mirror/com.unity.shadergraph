@@ -45,9 +45,7 @@ namespace UnityEditor.ShaderGraph
                 var assetGuid = AssetDatabase.AssetPathToGUID(importer.assetPath);
                 graphObject.graph = new GraphData
                 {
-                    assetGuid = assetGuid,
-                    isSubGraph = isSubGraph,
-                    messageManager = null
+                    assetGuid = assetGuid, isSubGraph = isSubGraph, messageManager = null
                 };
                 MultiJson.Deserialize(graphObject.graph, textGraph);
                 graphObject.graph.OnEnable();

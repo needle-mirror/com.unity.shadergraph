@@ -75,10 +75,7 @@ namespace UnityEditor.ShaderGraph
             int numLayers = value.layers.Count;
             if (numLayers > 0)
             {
-                // PVT should always be Global to be compatible with SRP batcher
-                HLSLDeclaration decl = (value.procedural) ? HLSLDeclaration.Global : HLSLDeclaration.UnityPerMaterial;
-
-                action(new HLSLProperty(HLSLType._CUSTOM, referenceName + "_CBDecl", decl, concretePrecision)
+                action(new HLSLProperty(HLSLType._CUSTOM, referenceName, HLSLDeclaration.UnityPerMaterial, concretePrecision)
                 {
                     customDeclaration = (ssb) =>
                     {
@@ -135,7 +132,7 @@ namespace UnityEditor.ShaderGraph
                     builder.AppendNewLine();
                 };
 
-                action(new HLSLProperty(HLSLType._CUSTOM, referenceName + "_Global", HLSLDeclaration.Global, concretePrecision)
+                action(new HLSLProperty(HLSLType._CUSTOM, referenceName, HLSLDeclaration.Global, concretePrecision)
                 {
                     customDeclaration = customDecl
                 });
@@ -143,7 +140,7 @@ namespace UnityEditor.ShaderGraph
         }
 
         // argument string used to pass this property to a subgraph
-        internal override string GetPropertyAsArgumentString()
+        internal override string GetPropertyAsArgumentString(string precisionString)
         {
             return "VTPropertyWithTextureType " + referenceName;
         }
@@ -165,7 +162,7 @@ namespace UnityEditor.ShaderGraph
 
         internal override ShaderInput Copy()
         {
-            var vt = new VirtualTextureShaderProperty
+            var vt =  new VirtualTextureShaderProperty
             {
                 displayName = displayName,
                 value = new SerializableVirtualTexture(),
@@ -204,11 +201,8 @@ namespace UnityEditor.ShaderGraph
 
         public override void OnAfterDeserialize(string json)
         {
-            if (!value.procedural)
-            {
-                // non procedural VT shader properties must always be exposed
-                generatePropertyBlock = true;
-            }
+            // VT shader properties must always be exposed
+            generatePropertyBlock = true;
         }
     }
 }

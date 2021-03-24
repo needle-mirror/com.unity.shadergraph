@@ -56,6 +56,7 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
+        // this node's precision is always controlled by the property precision
         public override bool canSetPrecision => false;
 
         public void UpdateNodeDisplayName(string newDisplayName)
@@ -88,19 +89,19 @@ namespace UnityEditor.ShaderGraph
                     break;
                 case ConcreteSlotValueType.Vector1:
                     AddSlot(new Vector1MaterialSlot(OutputSlotId, property.displayName, "Out", SlotType.Output, 0));
-                    RemoveSlotsNameNotMatching(new[] { OutputSlotId });
+                    RemoveSlotsNameNotMatching(new[] {OutputSlotId});
                     break;
                 case ConcreteSlotValueType.Vector2:
                     AddSlot(new Vector2MaterialSlot(OutputSlotId, property.displayName, "Out", SlotType.Output, Vector4.zero));
-                    RemoveSlotsNameNotMatching(new[] { OutputSlotId });
+                    RemoveSlotsNameNotMatching(new[] {OutputSlotId});
                     break;
                 case ConcreteSlotValueType.Vector3:
                     AddSlot(new Vector3MaterialSlot(OutputSlotId, property.displayName, "Out", SlotType.Output, Vector4.zero));
-                    RemoveSlotsNameNotMatching(new[] { OutputSlotId });
+                    RemoveSlotsNameNotMatching(new[] {OutputSlotId});
                     break;
                 case ConcreteSlotValueType.Vector4:
                     AddSlot(new Vector4MaterialSlot(OutputSlotId, property.displayName, "Out", SlotType.Output, Vector4.zero));
-                    RemoveSlotsNameNotMatching(new[] { OutputSlotId });
+                    RemoveSlotsNameNotMatching(new[] {OutputSlotId});
                     break;
                 case ConcreteSlotValueType.Matrix2:
                     AddSlot(new Matrix2MaterialSlot(OutputSlotId, property.displayName, "Out", SlotType.Output));
@@ -116,15 +117,15 @@ namespace UnityEditor.ShaderGraph
                     break;
                 case ConcreteSlotValueType.Texture2D:
                     AddSlot(new Texture2DMaterialSlot(OutputSlotId, property.displayName, "Out", SlotType.Output));
-                    RemoveSlotsNameNotMatching(new[] { OutputSlotId });
+                    RemoveSlotsNameNotMatching(new[] {OutputSlotId});
                     break;
                 case ConcreteSlotValueType.Texture2DArray:
                     AddSlot(new Texture2DArrayMaterialSlot(OutputSlotId, property.displayName, "Out", SlotType.Output));
-                    RemoveSlotsNameNotMatching(new[] { OutputSlotId });
+                    RemoveSlotsNameNotMatching(new[] {OutputSlotId});
                     break;
                 case ConcreteSlotValueType.Texture3D:
                     AddSlot(new Texture3DMaterialSlot(OutputSlotId, property.displayName, "Out", SlotType.Output));
-                    RemoveSlotsNameNotMatching(new[] { OutputSlotId });
+                    RemoveSlotsNameNotMatching(new[] {OutputSlotId});
                     break;
                 case ConcreteSlotValueType.Cubemap:
                     AddSlot(new CubemapMaterialSlot(OutputSlotId, property.displayName, "Out", SlotType.Output));
@@ -249,7 +250,7 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
-        public override void EvaluateConcretePrecision(List<MaterialSlot> inputSlots)
+        public override void UpdatePrecision(List<MaterialSlot> inputSlots)
         {
             // Get precision from Property
             if (property == null)
@@ -258,12 +259,12 @@ namespace UnityEditor.ShaderGraph
                 hasError = true;
                 return;
             }
-            // If Property has a precision override use that
+
+            // this node's precision is always controlled by the property precision
             precision = property.precision;
-            if (precision != Precision.Inherit)
-                concretePrecision = precision.ToConcrete();
-            else
-                concretePrecision = owner.concretePrecision;
+
+            graphPrecision = precision.ToGraphPrecision(GraphPrecision.Graph);
+            concretePrecision = graphPrecision.ToConcrete(owner.graphDefaultConcretePrecision);
         }
     }
 }

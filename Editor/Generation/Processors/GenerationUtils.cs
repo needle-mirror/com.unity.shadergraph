@@ -117,13 +117,11 @@ namespace UnityEditor.ShaderGraph
 
         internal static void GeneratePackedStruct(StructDescriptor shaderStruct, ActiveFields activeFields, out StructDescriptor packStruct)
         {
-            packStruct = new StructDescriptor()
-            {
-                name = "Packed" + shaderStruct.name,
-                packFields = true,
-                fields = new FieldDescriptor[] {}
-            };
+            packStruct = new StructDescriptor() {
+                name = "Packed" + shaderStruct.name, packFields = true,
+                fields = new FieldDescriptor[] {} };
             List<FieldDescriptor> packedSubscripts = new List<FieldDescriptor>();
+            List<FieldDescriptor> postUnpackedSubscripts = new List<FieldDescriptor>();
             List<int> packedCounts = new List<int>();
 
             foreach (FieldDescriptor subscript in shaderStruct.fields)
@@ -146,8 +144,11 @@ namespace UnityEditor.ShaderGraph
 
                 if (fieldIsActive)
                 {
-                    //if field is active:
-                    if (subscript.HasSemantic() || subscript.vectorCount == 0)
+                    // special case, "SHADER_STAGE_FRAGMENT" fields must be packed at the end of the struct,
+                    // otherwise the vertex output struct will have different semantic ordering than the fragment input struct.
+                    if (subscript.HasPreprocessor() && subscript.preprocessor.Contains("SHADER_STAGE_FRAGMENT"))
+                        postUnpackedSubscripts.Add(subscript);
+                    else if (subscript.HasSemantic() || subscript.vectorCount == 0)
                         packedSubscripts.Add(subscript);
                     else
                     {
@@ -156,7 +157,7 @@ namespace UnityEditor.ShaderGraph
                         // super simple packing: use the first interpolator that has room for the whole value
                         int interpIndex = packedCounts.FindIndex(x => (x + vectorCount <= 4));
                         int firstChannel;
-                        if (interpIndex < 0)
+                        if (interpIndex < 0 || subscript.HasPreprocessor())
                         {
                             // allocate a new interpolator
                             interpIndex = packedCounts.Count;
@@ -169,13 +170,16 @@ namespace UnityEditor.ShaderGraph
                             firstChannel = packedCounts[interpIndex];
                             packedCounts[interpIndex] += vectorCount;
                         }
-                        var packedSubscript = new FieldDescriptor(packStruct.name, "interp" + interpIndex, "", subscript.type,
-                            "TEXCOORD" + interpIndex, subscript.preprocessor, StructFieldOptions.Static);
-                        packedSubscripts.Add(packedSubscript);
                     }
                 }
             }
-            packStruct.fields = packedSubscripts.ToArray();
+            for (int i = 0; i < packedCounts.Count(); ++i)
+            {
+                // todo: ensure this packing adjustment doesn't waste interpolators when many preprocessors are in use.
+                var packedSubscript = new FieldDescriptor(packStruct.name, "interp" + i, "", "float" + packedCounts[i], "INTERP" + i, "", StructFieldOptions.Static);
+                packedSubscripts.Add(packedSubscript);
+            }
+            packStruct.fields = packedSubscripts.Concat(postUnpackedSubscripts).ToArray();
         }
 
         internal static void GenerateInterpolatorFunctions(StructDescriptor shaderStruct, IActiveFields activeFields, out ShaderStringBuilder interpolatorBuilder)
@@ -219,7 +223,7 @@ namespace UnityEditor.ShaderGraph
                         // super simple packing: use the first interpolator that has room for the whole value
                         int interpIndex = packedCounts.FindIndex(x => (x + vectorCount <= 4));
                         int firstChannel;
-                        if (interpIndex < 0)
+                        if (interpIndex < 0 || subscript.HasPreprocessor())
                         {
                             // allocate a new interpolator
                             interpIndex = packedCounts.Count;
@@ -269,7 +273,7 @@ namespace UnityEditor.ShaderGraph
         }
 
         internal static void GetActiveFieldsAndPermutationsForNodes(PassDescriptor pass,
-            KeywordCollector keywordCollector, List<AbstractMaterialNode> vertexNodes, List<AbstractMaterialNode> pixelNodes,
+            KeywordCollector keywordCollector,  List<AbstractMaterialNode> vertexNodes, List<AbstractMaterialNode> pixelNodes,
             List<int>[] vertexNodePermutations, List<int>[] pixelNodePermutations,
             ActiveFields activeFields, out ShaderGraphRequirementsPerKeyword graphRequirements)
         {
@@ -569,7 +573,7 @@ namespace UnityEditor.ShaderGraph
 
         internal static string AdaptNodeOutputForPreview(AbstractMaterialNode node, int outputSlotId)
         {
-            var rawOutput = node.GetVariableNameForSlot(outputSlotId);
+            string rawOutput = node.GetVariableNameForSlot(outputSlotId);
             return AdaptNodeOutputForPreview(node, outputSlotId, rawOutput);
         }
 
@@ -840,7 +844,6 @@ namespace UnityEditor.ShaderGraph
             {
                 functionRegistry.builder.currentNode = activeNode;
                 functionNode.GenerateNodeFunction(functionRegistry, mode);
-                functionRegistry.builder.ReplaceInCurrentMapping(PrecisionUtil.Token, activeNode.concretePrecision.ToShaderString());
             }
 
             if (activeNode is IGeneratesBodyCode bodyNode)
@@ -901,7 +904,7 @@ namespace UnityEditor.ShaderGraph
                     surfaceDescriptionFunction.AppendLine($"surface.Out = all(isfinite(surface.{hlslName})) ? {GenerationUtils.AdaptNodeOutputForPreview(rootNode, slot.id, "surface." + hlslName)} : float4(1.0f, 0.0f, 1.0f, 1.0f);");
                 }
             }
-            else if (rootNode.hasPreview)
+            else
             {
                 var slot = rootNode.GetOutputSlots<MaterialSlot>().FirstOrDefault();
                 if (slot != null)
@@ -931,7 +934,7 @@ namespace UnityEditor.ShaderGraph
             {
                 foreach (var slot in slots)
                 {
-                    string hlslName = NodeUtils.GetHLSLSafeName(slot.shaderOutputName);
+                    string hlslName = NodeUtils.ConvertToValidHLSLIdentifier(slot.shaderOutputName);
                     builder.AppendLine("{0} {1};", slot.concreteValueType.ToShaderString(slot.owner.concretePrecision), hlslName);
 
                     if (activeFields != null)
@@ -982,7 +985,7 @@ namespace UnityEditor.ShaderGraph
                     foreach (var slot in slots)
                     {
                         var isSlotConnected = graph.GetEdges(slot.slotReference).Any();
-                        var slotName = NodeUtils.GetHLSLSafeName(slot.shaderOutputName);
+                        var slotName = NodeUtils.ConvertToValidHLSLIdentifier(slot.shaderOutputName);
                         var slotValue = isSlotConnected ?
                             ((AbstractMaterialNode)slot.owner).GetSlotValue(slot.id, mode, slot.owner.concretePrecision) : slot.GetDefaultValue(mode, slot.owner.concretePrecision);
                         builder.AppendLine("description.{0} = {1};", slotName, slotValue);

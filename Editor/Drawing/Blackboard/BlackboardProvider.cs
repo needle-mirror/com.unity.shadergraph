@@ -44,6 +44,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
             blackboard = new SGBlackboard(associatedGraphView)
             {
                 subTitle = FormatPath(graph.path),
+                editTextRequested = EditTextRequested,
                 addItemRequested = AddItemRequested,
                 moveItemRequested = MoveItemRequested
             };
@@ -213,8 +214,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
             var shaderInputTypes = TypeCache.GetTypesWithAttribute<BlackboardInputInfo>().ToList();
 
             // Sort the ShaderInput by priority using the BlackboardInputInfo attribute
-            shaderInputTypes.Sort((s1, s2) =>
-            {
+            shaderInputTypes.Sort((s1, s2) => {
                 var info1 = Attribute.GetCustomAttribute(s1, typeof(BlackboardInputInfo)) as BlackboardInputInfo;
                 var info2 = Attribute.GetCustomAttribute(s2, typeof(BlackboardInputInfo)) as BlackboardInputInfo;
 
@@ -263,6 +263,21 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
             else
             {
                 gm.AddItem(new GUIContent($"Keyword/{keyword.displayName}"), false, () => AddInputRow(m_Graph.AddCopyOfShaderInput(keyword)));
+            }
+        }
+
+        void EditTextRequested(SGBlackboard blackboard, VisualElement visualElement, string newText)
+        {
+            var field = (BlackboardFieldView)visualElement;
+            var input = (ShaderInput)field.userData;
+            if (!string.IsNullOrEmpty(newText) && newText != input.displayName)
+            {
+                m_Graph.owner.RegisterCompleteObjectUndo("Edit Graph Input Name");
+                input.SetDisplayNameAndSanitizeForGraph(m_Graph, newText);
+                field.text = input.displayName;
+                // need to trigger the inspector update to match
+                field.InspectorUpdateTrigger();
+                DirtyNodes();
             }
         }
 
@@ -372,7 +387,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
                 {
                     var icon = (m_Graph.isSubGraph || keyword.isExposed) ? exposedIcon : null;
 
-                    string typeText = keyword.keywordType.ToString() + " Keyword";
+                    string typeText = keyword.keywordType.ToString()  + " Keyword";
                     typeText = keyword.isBuiltIn ? "Built-in " + typeText : typeText;
 
                     field = new BlackboardFieldView(m_Graph, keyword, icon, keyword.displayName, typeText) { userData = keyword };
@@ -455,6 +470,15 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
                 return m_InputRows[input];
             else
                 return null;
+        }
+
+        // Clear any rows that are currently highlighted due to mouse hovering over PropertyNodeViews in the graph
+        public void ClearHighlightedRows()
+        {
+            foreach (var row in m_InputRows)
+            {
+                row.Value.RemoveFromClassList("hovered");
+            }
         }
 
         void OnMouseHover(EventBase evt, ShaderInput input)

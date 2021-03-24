@@ -139,7 +139,7 @@ namespace UnityEditor.ShaderGraph
                 sb.AppendLine("{");
                 using (sb.IndentScope())
                 {
-                    sb.AppendLine("const DeformedVertexData vertexData = _DeformedMeshData[asuint(UNITY_ACCESS_HYBRID_INSTANCED_PROP(_ComputeMeshIndex, float)) + vertexID];");
+                    sb.AppendLine("const DeformedVertexData vertexData = _DeformedMeshData[asuint(_ComputeMeshIndex) + vertexID];");
                     sb.AppendLine("positionOut = vertexData.Position;");
                     sb.AppendLine("normalOut = vertexData.Normal;");
                     sb.AppendLine("tangentOut = vertexData.Tangent;");
@@ -150,7 +150,7 @@ namespace UnityEditor.ShaderGraph
 
         string GetFunctionName()
         {
-            return $"Unity_ComputeDeformedVertex_{concretePrecision.ToShaderString()}";
+            return "Unity_ComputeDeformedVertex_$precision";
         }
     }
 }

@@ -201,7 +201,9 @@ namespace UnityEditor.ShaderGraph.Drawing
                 m_GraphView.AddManipulator(new RectangleSelector());
                 m_GraphView.AddManipulator(new ClickSelector());
                 m_GraphView.RegisterCallback<KeyDownEvent>(OnKeyDown);
-                m_GraphView.RegisterCallback<MouseUpEvent>(evt => { m_GraphView.ResetSelectedBlockNodes(); });
+                // Bugfix 1312222. Running 'ResetSelectedBlockNodes' on all mouse up interactions will break selection
+                // after changing tabs. This was originally added to fix a bug with middle-mouse clicking while dragging a block node.
+                m_GraphView.RegisterCallback<MouseUpEvent>(evt => { if (evt.button == (int)MouseButton.MiddleMouse) m_GraphView.ResetSelectedBlockNodes(); });
                 // This takes care of when a property is dragged from BB and then the drag is ended by the Escape key, hides the scroll boundary regions if so
                 m_GraphView.RegisterCallback<DragExitedEvent>(evt => { m_BlackboardProvider.blackboard.HideScrollBoundaryRegions(); });
 
@@ -342,15 +344,17 @@ namespace UnityEditor.ShaderGraph.Drawing
         // Because of their differences we do this is different ways, for now.
         void UpdateSubWindowsVisibility()
         {
+            // Blackboard needs to be effectively removed when hidden to avoid bugs.
             if (m_UserViewSettings.isBlackboardVisible)
-                m_BlackboardProvider.blackboard.ShowWindow();
+                m_GraphView.Insert(m_GraphView.childCount, m_BlackboardProvider.blackboard);
             else
-                m_BlackboardProvider.blackboard.HideWindow();
+                m_BlackboardProvider.blackboard.RemoveFromHierarchy();
 
+            // Same for the inspector
             if (m_UserViewSettings.isInspectorVisible)
-                m_InspectorView.ShowWindow();
+                m_GraphView.Insert(m_GraphView.childCount, m_InspectorView);
             else
-                m_InspectorView.HideWindow();
+                m_InspectorView.RemoveFromHierarchy();
 
             m_MasterPreviewView.visible = m_UserViewSettings.isPreviewVisible;
         }
@@ -375,7 +379,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         void CreateMasterPreview()
         {
-            m_MasterPreviewView = new MasterPreviewView(previewManager, m_Graph) { name = "masterPreview" };
+            m_MasterPreviewView = new MasterPreviewView(previewManager, m_Graph) {name = "masterPreview"};
 
             var masterPreviewViewDraggable = new WindowDraggable(null, this);
             m_MasterPreviewView.AddManipulator(masterPreviewViewDraggable);
@@ -654,7 +658,40 @@ namespace UnityEditor.ShaderGraph.Drawing
                 m_InspectorView.Update();
             m_GroupHashSet.Clear();
 
-            HandleRemovedNodes();
+            foreach (var node in m_Graph.removedNodes)
+            {
+                node.UnregisterCallback(OnNodeChanged);
+                var nodeView = m_GraphView.nodes.ToList().OfType<IShaderNodeView>()
+                    .FirstOrDefault(p => p.node != null && p.node == node);
+                if (nodeView != null)
+                {
+                    nodeView.Dispose();
+
+                    if (node is BlockNode blockNode)
+                    {
+                        var context = m_GraphView.GetContext(blockNode.contextData);
+                        // blocknode may be floating and not actually in the stacknode's visual hierarchy.
+                        if (context.Contains(nodeView as Node))
+                        {
+                            context.RemoveElement(nodeView as Node);
+                        }
+                        else
+                        {
+                            m_GraphView.RemoveElement((Node)nodeView);
+                        }
+                    }
+                    else
+                    {
+                        m_GraphView.RemoveElement((Node)nodeView);
+                    }
+
+                    if (node.group != null)
+                    {
+                        var shaderGroup = m_GraphView.graphElements.ToList().OfType<ShaderGroup>().First(g => g.userData == node.group);
+                        m_GroupHashSet.Add(shaderGroup);
+                    }
+                }
+            }
 
             foreach (var noteData in m_Graph.removedNotes)
             {
@@ -801,57 +838,9 @@ namespace UnityEditor.ShaderGraph.Drawing
                 }
             }
 
-            // If we auto-remove blocks and something has happened to trigger a check (don't re-check constantly)
-            if (m_Graph.checkAutoAddRemoveBlocks && ShaderGraphPreferences.autoAddRemoveBlocks)
-            {
-                var activeBlocks = m_Graph.GetActiveBlocksForAllActiveTargets();
-                m_Graph.AddRemoveBlocksFromActiveList(activeBlocks);
-                m_Graph.checkAutoAddRemoveBlocks = false;
-                // We have to re-check any nodes views that need to be removed since we already handled this above. After leaving this function the states on m_Graph will be cleared so we'll lose track of removed blocks.
-                HandleRemovedNodes();
-            }
-
             UpdateBadges();
 
             RegisterGraphViewCallbacks();
-        }
-
-        void HandleRemovedNodes()
-        {
-            foreach (var node in m_Graph.removedNodes)
-            {
-                node.UnregisterCallback(OnNodeChanged);
-                var nodeView = m_GraphView.nodes.ToList().OfType<IShaderNodeView>()
-                    .FirstOrDefault(p => p.node != null && p.node == node);
-                if (nodeView != null)
-                {
-                    nodeView.Dispose();
-
-                    if (node is BlockNode blockNode)
-                    {
-                        var context = m_GraphView.GetContext(blockNode.contextData);
-                        // blocknode may be floating and not actually in the stacknode's visual hierarchy.
-                        if (context.Contains(nodeView as Node))
-                        {
-                            context.RemoveElement(nodeView as Node);
-                        }
-                        else
-                        {
-                            m_GraphView.RemoveElement((Node)nodeView);
-                        }
-                    }
-                    else
-                    {
-                        m_GraphView.RemoveElement((Node)nodeView);
-                    }
-
-                    if (node.group != null)
-                    {
-                        var shaderGroup = m_GraphView.graphElements.ToList().OfType<ShaderGroup>().First(g => g.userData == node.group);
-                        m_GroupHashSet.Add(shaderGroup);
-                    }
-                }
-            }
         }
 
         void UpdateBadges()
@@ -873,7 +862,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                 else
                 {
                     var foundMessage = messageData.Value.First();
-                    nodeView.AttachMessage(foundMessage.message, foundMessage.severity);
+                    string messageString = foundMessage.message + " at line " + foundMessage.line;
+                    nodeView.AttachMessage(messageString, foundMessage.severity);
                 }
             }
         }
@@ -902,14 +892,14 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
             else if (node is RedirectNodeData redirectNodeData)
             {
-                var redirectNodeView = new RedirectNodeView { userData = redirectNodeData };
+                var redirectNodeView = new RedirectNodeView {userData = redirectNodeData};
                 m_GraphView.AddElement(redirectNodeView);
                 redirectNodeView.ConnectToData(materialNode, m_EdgeConnectorListener);
                 nodeView = redirectNodeView;
             }
             else
             {
-                var materialNodeView = new MaterialNodeView { userData = materialNode };
+                var materialNodeView = new MaterialNodeView {userData = materialNode};
                 m_GraphView.AddElement(materialNodeView);
                 materialNodeView.Initialize(materialNode, m_PreviewManager, m_EdgeConnectorListener, graphView);
                 m_ColorManager.UpdateNodeView(materialNodeView);

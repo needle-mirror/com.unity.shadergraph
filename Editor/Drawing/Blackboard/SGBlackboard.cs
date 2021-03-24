@@ -25,14 +25,14 @@ namespace UnityEditor.ShaderGraph.Drawing.Views.Blackboard
 
         public Action<SGBlackboard> addItemRequested { get; set; }
         public Action<SGBlackboard, int, VisualElement> moveItemRequested { get; set; }
+        public Action<SGBlackboard, VisualElement, string> editTextRequested { get; set; }
 
         public SGBlackboard(GraphView associatedGraphView) : base(associatedGraphView)
         {
             windowDockingLayout.dockingLeft = true;
 
             var addButton = m_MainContainer.Q(name: "addButton") as Button;
-            addButton.clickable.clicked += () =>
-            {
+            addButton.clickable.clicked += () => {
                 if (addItemRequested != null)
                 {
                     addItemRequested(this);

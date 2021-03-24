@@ -10,7 +10,7 @@ namespace UnityEditor.ShaderGraph
     struct ShaderStringMapping
     {
         public AbstractMaterialNode node { get; set; }
-        //        public List<AbstractMaterialNode> nodes { get; set; }
+//        public List<AbstractMaterialNode> nodes { get; set; }
         public int startIndex { get; set; }
         public int count { get; set; }
     }
@@ -213,6 +213,11 @@ namespace UnityEditor.ShaderGraph
         {
             int start = m_CurrentMapping.startIndex;
             int end = m_StringBuilder.Length - start;
+            m_StringBuilder.Replace(oldValue, newValue, start, end);
+        }
+
+        public void Replace(string oldValue, string newValue, int start, int end)
+        {
             m_StringBuilder.Replace(oldValue, newValue, start, end);
         }
 

@@ -34,7 +34,7 @@ namespace UnityEditor.Graphing.Util
             }
             else
             {
-                messages[nodeId] = new List<ShaderMessage>() { error };
+                messages[nodeId] = new List<ShaderMessage>() {error};
             }
 
             nodeMessagesChanged = true;
@@ -146,6 +146,19 @@ namespace UnityEditor.Graphing.Util
         public static void Log(AbstractMaterialNode node, string path, ShaderMessage message, Object context)
         {
             var errString = $"{message.severity} in Graph at {path} at node {node.name}: {message.message}";
+            if (message.severity == ShaderCompilerMessageSeverity.Error)
+            {
+                Debug.LogError(errString, context);
+            }
+            else
+            {
+                Debug.LogWarning(errString, context);
+            }
+        }
+
+        public static void Log(string path, ShaderMessage message, Object context)
+        {
+            var errString = $"{message.severity} in Graph at {path} on line {message.line}: {message.message}";
             if (message.severity == ShaderCompilerMessageSeverity.Error)
             {
                 Debug.LogError(errString, context);

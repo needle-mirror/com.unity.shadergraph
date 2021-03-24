@@ -1,12 +1,12 @@
 # Creating a new Shader Graph Asset
 
-After you configure an SRP, you can create a new Shader Graph Asset. Right-click the Project window, locate **Create** > **Shader** in the context menu, then select your desired type of Shader Graph.
+After you configure an SRP, you can create a new Shader Graph Asset. Right-click the Project window, locate **Create** > **Shader Graph** in the context menu, then select your desired type of Shader Graph.
 
 The type of Shader Graph available is dependent on the render pipelines present in your project. Some options may or may not be present based on the render pipelines.
 
 The following options are always available:
 
-|       |  |
+|       |  | |
 |:------------|:----------------|:------------|
 | Blank Shader Graph | A completely blank shader graph. No target is selected and no blocks are added to the Master Stack. |
 | Sub Graph |  A blank sub graph asset. |
@@ -33,7 +33,7 @@ The final connection that determines your shader output. See [Master Stack]() fo
 
 ### Preview window
 
-An area to preview the current shader output. Here, you can rotate the object, and zoom in and out. You can also change the basic mesh on which the shader is previewed. See [Main Preview](Master-Preview) for more information.
+An area to preview the current shader output. Here, you can rotate the object, and zoom in and out. You can also change the basic mesh on which the shader is previewed. See [Main Preview](Main-Preview) for more information.
 
 ![img](images/MainPreview.png)
 

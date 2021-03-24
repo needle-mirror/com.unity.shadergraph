@@ -27,6 +27,7 @@ namespace UnityEditor.ShaderGraph
                     new KeywordEntry("Medium", "MEDIUM"),
                     new KeywordEntry("Low", "LOW"),
                 },
+                stages = KeywordShaderStage.All,
             };
         }
     }
@@ -65,11 +66,55 @@ namespace UnityEditor.ShaderGraph
             }
         }
 
+        public static bool NeedsMultiStageDefinition(this KeywordDescriptor keyword, ref List<KeywordShaderStage> dstStages)
+        {
+            dstStages.Clear();
+
+            // All doesn't need special treatment.
+            if (keyword.stages == KeywordShaderStage.All)
+                return false;
+
+            if ((keyword.stages & KeywordShaderStage.Vertex) == KeywordShaderStage.Vertex)
+                dstStages.Add(KeywordShaderStage.Vertex);
+            if ((keyword.stages & KeywordShaderStage.Hull) == KeywordShaderStage.Hull)
+                dstStages.Add(KeywordShaderStage.Hull);
+            if ((keyword.stages & KeywordShaderStage.Domain) == KeywordShaderStage.Domain)
+                dstStages.Add(KeywordShaderStage.Domain);
+            if ((keyword.stages & KeywordShaderStage.Geometry) == KeywordShaderStage.Geometry)
+                dstStages.Add(KeywordShaderStage.Geometry);
+            if ((keyword.stages & KeywordShaderStage.RayTracing) == KeywordShaderStage.RayTracing)
+                dstStages.Add(KeywordShaderStage.RayTracing);
+
+            return dstStages.Count > 1;
+        }
+
+        public static string ToKeywordStagesString(this KeywordShaderStage stages)
+        {
+            string outString = "";
+
+            if (stages == KeywordShaderStage.All)
+                return outString;
+            if (stages == KeywordShaderStage.Vertex)
+                outString += "_vertex";
+            if (stages == KeywordShaderStage.Fragment)
+                outString += "_fragment";
+            if (stages == KeywordShaderStage.Geometry)
+                outString += "_geometry";
+            if (stages == KeywordShaderStage.Hull)
+                outString += "_hull";
+            if (stages == KeywordShaderStage.Domain)
+                outString += "_domain";
+            if (stages == KeywordShaderStage.RayTracing)
+                outString += "_raytracing";
+
+            return outString;
+        }
+
         public static string ToDeclarationString(this KeywordDescriptor keyword)
         {
             // Get definition type using scope
             string scopeString = keyword.scope == KeywordScope.Local ? "_local" : string.Empty;
-            string definitionString = $"{keyword.definition.ToDeclarationString()}{scopeString}";
+            string definitionString = $"{keyword.definition.ToDeclarationString()}{scopeString}{keyword.stages.ToKeywordStagesString()}";
 
             switch (keyword.type)
             {
@@ -95,6 +140,34 @@ namespace UnityEditor.ShaderGraph
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        public static int GetKeywordPermutationCount(this GraphData graph)
+        {
+            // Gather all unique keywords from the Graph including Sub Graphs
+            IEnumerable<ShaderKeyword> allKeywords = graph.keywords;
+            var subGraphNodes = graph.GetNodes<SubGraphNode>();
+            foreach (SubGraphNode subGraphNode in subGraphNodes)
+            {
+                if (subGraphNode.asset == null)
+                {
+                    continue;
+                }
+                allKeywords = allKeywords.Union(subGraphNode.asset.keywords);
+            }
+            allKeywords = allKeywords.Distinct();
+
+            // Get permutation count for all Keywords
+            int permutationCount = 1;
+            foreach (ShaderKeyword keyword in allKeywords)
+            {
+                if (keyword.keywordType == KeywordType.Boolean)
+                    permutationCount *= 2;
+                else
+                    permutationCount *= keyword.entries.Count;
+            }
+
+            return permutationCount;
         }
 
         public static string GetKeywordPermutationSetConditional(List<int> permutationSet)

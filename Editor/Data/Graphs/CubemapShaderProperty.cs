@@ -36,12 +36,12 @@ namespace UnityEditor.ShaderGraph.Internal
             action(new HLSLProperty(HLSLType._SamplerState, "sampler" + referenceName, HLSLDeclaration.Global));
         }
 
-        internal override string GetPropertyAsArgumentString()
+        internal override string GetPropertyAsArgumentString(string precisionString)
         {
             return "UnityTextureCube " + referenceName;
         }
 
-        internal override string GetPropertyAsArgumentStringForVFX()
+        internal override string GetPropertyAsArgumentStringForVFX(string precisionString)
         {
             return "TEXTURECUBE(" + referenceName + ")";
         }

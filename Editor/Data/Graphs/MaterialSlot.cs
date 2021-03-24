@@ -13,7 +13,7 @@ namespace UnityEditor.ShaderGraph
     [Serializable]
     abstract class MaterialSlot : JsonObject
     {
-        const string k_NotInit = "Not Initilaized";
+        const string k_NotInit =  "Not Initilaized";
 
         [SerializeField]
         int m_Id;
@@ -250,6 +250,8 @@ namespace UnityEditor.ShaderGraph
             return otherSlot != null
                 && otherSlot.owner != owner
                 && otherSlot.isInputSlot != isInputSlot
+                && !hidden
+                && !otherSlot.hidden
                 && ((isInputSlot
                     ? SlotValueHelper.AreCompatible(valueType, otherSlot.concreteValueType)
                     : SlotValueHelper.AreCompatible(otherSlot.valueType, concreteValueType)));
@@ -257,8 +259,11 @@ namespace UnityEditor.ShaderGraph
 
         public bool IsCompatibleStageWith(MaterialSlot otherSlot)
         {
-            var candidateStage = otherSlot.stageCapability;
-            return stageCapability == ShaderStageCapability.All || candidateStage == stageCapability;
+            var startStage = otherSlot.stageCapability;
+            if (startStage == ShaderStageCapability.All)
+                startStage = NodeUtils.GetEffectiveShaderStageCapability(otherSlot, true)
+                    & NodeUtils.GetEffectiveShaderStageCapability(otherSlot, false);
+            return startStage == ShaderStageCapability.All || stageCapability == ShaderStageCapability.All || stageCapability == startStage;
         }
 
         public string GetDefaultValue(GenerationMode generationMode, ConcretePrecision concretePrecision)

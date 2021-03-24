@@ -59,9 +59,9 @@ namespace UnityEditor.ShaderGraph.Internal
 
         ConcretePrecision m_ConcretePrecision = ConcretePrecision.Single;
         public ConcretePrecision concretePrecision => m_ConcretePrecision;
-        internal void ValidateConcretePrecision(ConcretePrecision graphPrecision)
+        internal void SetupConcretePrecision(ConcretePrecision defaultPrecision)
         {
-            m_ConcretePrecision = (precision == Precision.Inherit) ? graphPrecision : precision.ToConcrete();
+            m_ConcretePrecision = precision.ToConcrete(defaultPrecision, defaultPrecision);
         }
 
         [SerializeField]
@@ -100,18 +100,18 @@ namespace UnityEditor.ShaderGraph.Internal
 
         internal abstract void ForeachHLSLProperty(Action<HLSLProperty> action);
 
-        internal virtual string GetPropertyAsArgumentStringForVFX()
+        internal virtual string GetPropertyAsArgumentStringForVFX(string precisionString)
         {
-            return GetPropertyAsArgumentString();
+            return GetPropertyAsArgumentString(precisionString);
         }
 
-        internal abstract string GetPropertyAsArgumentString();
+        internal abstract string GetPropertyAsArgumentString(string precisionString);
         internal abstract AbstractMaterialNode ToConcreteNode();
         internal abstract PreviewProperty GetPreviewMaterialProperty();
 
         public virtual string GetPropertyTypeString()
         {
-            string depString = $" (Deprecated{(ShaderGraphPreferences.allowDeprecatedBehaviors ? " V" + sgVersion : "")})";
+            string depString = $" (Deprecated{(ShaderGraphPreferences.allowDeprecatedBehaviors ? " V" + sgVersion : "" )})";
             return propertyType.ToString() + (sgVersion < latestVersion ? depString : "");
         }
     }
@@ -205,28 +205,6 @@ namespace UnityEditor.ShaderGraph.Internal
             this.declaration = declaration;
             this.precision = precision;
             this.customDeclaration = null;
-        }
-
-        public bool ValueEquals(HLSLProperty other)
-        {
-            if ((name != other.name) ||
-                (type != other.type) ||
-                (precision != other.precision) ||
-                (declaration != other.declaration) ||
-                ((customDeclaration == null) != (other.customDeclaration == null)))
-            {
-                return false;
-            }
-            else if (customDeclaration != null)
-            {
-                var ssb = new ShaderStringBuilder();
-                var ssbother = new ShaderStringBuilder();
-                customDeclaration(ssb);
-                other.customDeclaration(ssbother);
-                if (ssb.ToCodeBlock() != ssbother.ToCodeBlock())
-                    return false;
-            }
-            return true;
         }
 
         static string[,] kValueTypeStrings = new string[(int)HLSLType.FirstObjectType, 2]

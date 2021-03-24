@@ -22,6 +22,11 @@ namespace UnityEditor.Graphing
         [SerializeField]
         string m_AssetGuid;
 
+        internal string AssetGuid
+        {
+            get => m_AssetGuid;
+        }
+
         [NonSerialized]
         GraphData m_Graph;
 
@@ -84,7 +89,7 @@ namespace UnityEditor.Graphing
         GraphData DeserializeGraph()
         {
             var json = m_SerializedGraph.JSONnodeData;
-            var deserializedGraph = new GraphData { isSubGraph = m_IsSubGraph, assetGuid = m_AssetGuid };
+            var deserializedGraph = new GraphData {isSubGraph = m_IsSubGraph, assetGuid = m_AssetGuid};
             MultiJson.Deserialize(deserializedGraph, json);
             m_DeserializedVersion = m_SerializedVersion;
             m_SerializedGraph = default;
