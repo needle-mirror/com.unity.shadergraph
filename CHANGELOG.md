@@ -4,17 +4,29 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [10.5.1] - 2021-05-28
+## [10.6.0] - 2021-04-29
 
 Version Updated
 The version number for this package has increased due to a version update of a related graphics package.
 
+### Fixed
+- Fixed an issue where an integer property would be exposed in the material inspector as a float [1332564]
+- Fixed an issue where the normal vector in object space would scale with the objects scale, causing non-normalized normal vectors
+- Fixed a bug in ShaderGraph where sticky notes couldn't be copied and pasted [1221042].
+- Fixed GPU instancing support in Shadergraph [1319655] (https://issuetracker.unity3d.com/issues/shader-graph-errors-are-thrown-when-a-propertys-shader-declaration-is-set-to-hybrid-per-instance-and-exposed-is-disabled).
+- Fixed Procedural Virtual Texture compatibility with SRP Batcher [1329336] (https://issuetracker.unity3d.com/issues/procedural-virtual-texture-node-will-make-a-shadergraph-incompatible-with-srp-batcher)
+
 ## [10.5.0] - 2021-04-19
+
+### Added
+- Added subshadergraphs for SpeedTree 8 shadergraph support: SpeedTree8Wind, SpeedTree8ColorAlpha, SpeedTree8Billboard. 
+- Added an HLSL file implementing a version of the Unity core LODDitheringTransition function which can be used in a Shader Graph
 
 ### Fixed
 - Fixed a bug where property deduplication was failing and spamming errors [1317809] (https://issuetracker.unity3d.com/issues/console-error-when-adding-a-sample-texture-operator-when-a-sampler-state-property-is-present-in-blackboard)
 - Fixed a bug where synchronously compiling an unencountered shader variant for preview was causing long delays in graph updates [1324388]
 - Fixed an issue where double clicking a category or drop down arrow closes the searcher [1302267] (https://issuetracker.unity3d.com/issues/shadergraph-double-clicking-a-category-or-drop-down-arrow-closes-the-searcher)
+- Fixed a ShaderGraph issue where unused blocks get removed on edge replacement [1336831].
 
 ### Changed
 - Updated searcher package dependency to 4.3.2
