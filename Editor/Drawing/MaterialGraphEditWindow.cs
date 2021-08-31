@@ -703,7 +703,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             if (deserialized == null)
                 return;
 
-            var subGraph = new GraphData { isSubGraph = true, path = "Sub Graphs" };
+            var subGraph = new GraphData {isSubGraph = true, path = "Sub Graphs"};
             var subGraphOutputNode = new SubGraphOutputNode();
             {
                 var drawState = subGraphOutputNode.drawState;
@@ -1135,9 +1135,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                     graphObject.hideFlags = HideFlags.HideAndDontSave;
                     graphObject.graph = new GraphData
                     {
-                        assetGuid = assetGuid,
-                        isSubGraph = isSubGraph,
-                        messageManager = messageManager
+                        assetGuid = assetGuid, isSubGraph = isSubGraph, messageManager = messageManager
                     };
                     MultiJson.Deserialize(graphObject.graph, m_LastSerializedFileContents);
                     graphObject.graph.OnEnable();

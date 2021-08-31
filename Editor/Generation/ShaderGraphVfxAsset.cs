@@ -153,7 +153,7 @@ namespace UnityEditor.ShaderGraph.Internal
             if ((m_Data == null || m_Data.m_Properties == null || !m_Data.m_Properties.Any()) && !String.IsNullOrEmpty(m_SerializedVfxAssetData.JSONnodeData))
             {
                 m_Data = new ShaderGraphVfxAssetData();
-                MultiJson.Deserialize(m_Data, m_SerializedVfxAssetData.JSONnodeData);
+                MultiJson.Deserialize(m_Data , m_SerializedVfxAssetData.JSONnodeData);
             }
 
             foreach (var property in m_Data.m_Properties.SelectValue())

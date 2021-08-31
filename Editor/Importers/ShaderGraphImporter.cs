@@ -123,8 +123,7 @@ Shader ""Hidden/GraphErrorShader2""
             var textGraph = File.ReadAllText(path, Encoding.UTF8);
             var graph = new GraphData
             {
-                messageManager = new MessageManager(),
-                assetGuid = AssetDatabase.AssetPathToGUID(path)
+                messageManager = new MessageManager(), assetGuid = AssetDatabase.AssetPathToGUID(path)
             };
             MultiJson.Deserialize(graph, textGraph);
             graph.OnEnable();
@@ -300,8 +299,7 @@ Shader ""Hidden/GraphErrorShader2""
             var textGraph = File.ReadAllText(path, Encoding.UTF8);
             graph = new GraphData
             {
-                messageManager = new MessageManager(),
-                assetGuid = AssetDatabase.AssetPathToGUID(path)
+                messageManager = new MessageManager(), assetGuid = AssetDatabase.AssetPathToGUID(path)
             };
             MultiJson.Deserialize(graph, textGraph);
             graph.OnEnable();
@@ -315,8 +313,7 @@ Shader ""Hidden/GraphErrorShader2""
             var textGraph = File.ReadAllText(path, Encoding.UTF8);
             GraphData graph = new GraphData
             {
-                messageManager = new MessageManager(),
-                assetGuid = AssetDatabase.AssetPathToGUID(path)
+                messageManager = new MessageManager(), assetGuid = AssetDatabase.AssetPathToGUID(path)
             };
             MultiJson.Deserialize(graph, textGraph);
             graph.OnEnable();
