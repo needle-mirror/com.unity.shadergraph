@@ -9,7 +9,6 @@ namespace UnityEditor.ShaderGraph
         public TilingAndOffsetNode()
         {
             name = "Tiling And Offset";
-            synonyms = new string[] { "pan", "scale" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

@@ -8,7 +8,6 @@ namespace UnityEditor.ShaderGraph
         public SawtoothWaveNode()
         {
             name = "Sawtooth Wave";
-            synonyms = new string[] { "triangle wave" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

@@ -21,7 +21,6 @@ namespace UnityEditor.ShaderGraph
         public ComparisonNode()
         {
             name = "Comparison";
-            synonyms = new string[] { "equal", "greater than", "less than" };
         }
 
         [SerializeField]

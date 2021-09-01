@@ -50,7 +50,6 @@ namespace UnityEditor.ShaderGraph
         public TransformNode()
         {
             name = "Transform";
-            synonyms = new string[] { "world", "tangent", "object", "view", "screen", "convert" };
             UpdateNodeAfterDeserialization();
         }
 
@@ -189,9 +188,7 @@ namespace UnityEditor.ShaderGraph
             {
                 if (conversion.to == CoordinateSpace.World)
                 {
-                    transformString = string.Format(conversionType == ConversionType.Direction ?
-                        "mul(UNITY_MATRIX_I_V, $precision4({0}, 0)).xyz" :
-                        "mul(UNITY_MATRIX_I_V, $precision4({0}, 1)).xyz", inputValue);
+                    transformString = string.Format("mul(UNITY_MATRIX_I_V, $precision4({0}, 1)).xyz", inputValue);
                 }
                 else if (conversion.to == CoordinateSpace.Object)
                 {

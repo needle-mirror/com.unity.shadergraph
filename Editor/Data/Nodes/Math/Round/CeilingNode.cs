@@ -8,7 +8,6 @@ namespace UnityEditor.ShaderGraph
         public CeilingNode()
         {
             name = "Ceiling";
-            synonyms = new string[] { "up" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

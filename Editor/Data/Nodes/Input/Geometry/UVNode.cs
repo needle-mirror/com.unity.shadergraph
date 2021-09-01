@@ -33,7 +33,6 @@ namespace UnityEditor.ShaderGraph
         public UVNode()
         {
             name = "UV";
-            synonyms = new string[] { "texcoords", "coords", "coordinates" };
             UpdateNodeAfterDeserialization();
         }
 

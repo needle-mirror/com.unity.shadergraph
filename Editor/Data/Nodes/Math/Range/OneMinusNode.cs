@@ -8,7 +8,6 @@ namespace UnityEditor.ShaderGraph
         public OneMinusNode()
         {
             name = "One Minus";
-            synonyms = new string[] { "complement", "invert", "opposite" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

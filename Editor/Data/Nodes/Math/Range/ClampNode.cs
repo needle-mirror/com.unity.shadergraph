@@ -8,7 +8,6 @@ namespace UnityEditor.ShaderGraph
         public ClampNode()
         {
             name = "Clamp";
-            synonyms = new string[] { "limit" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

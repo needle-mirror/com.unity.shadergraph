@@ -14,7 +14,6 @@ namespace UnityEditor.ShaderGraph
         public FlipbookNode()
         {
             name = "Flipbook";
-            synonyms = new string[] { "atlas", "animation" };
             UpdateNodeAfterDeserialization();
         }
 

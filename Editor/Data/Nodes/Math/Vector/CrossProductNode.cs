@@ -9,7 +9,6 @@ namespace UnityEditor.ShaderGraph
         public CrossProductNode()
         {
             name = "Cross Product";
-            synonyms = new string[] { "perpendicular" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

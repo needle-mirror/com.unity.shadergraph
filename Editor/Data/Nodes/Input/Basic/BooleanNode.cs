@@ -18,7 +18,6 @@ namespace UnityEditor.ShaderGraph
         public BooleanNode()
         {
             name = "Boolean";
-            synonyms = new string[] { "switch", "true", "false", "on", "off" };
             UpdateNodeAfterDeserialization();
         }
 

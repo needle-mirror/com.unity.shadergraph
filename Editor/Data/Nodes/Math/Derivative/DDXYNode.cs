@@ -9,7 +9,6 @@ namespace UnityEditor.ShaderGraph
         public DDXYNode()
         {
             name = "DDXY";
-            synonyms = new string[] { "derivative" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

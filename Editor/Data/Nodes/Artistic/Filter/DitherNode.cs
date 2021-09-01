@@ -9,7 +9,6 @@ namespace UnityEditor.ShaderGraph
         public DitherNode()
         {
             name = "Dither";
-            synonyms = new string[] { "blue noise", "half tone" };
             UpdateNodeAfterDeserialization();
         }
 

@@ -9,7 +9,6 @@ namespace UnityEditor.ShaderGraph
         public ReflectionProbeNode()
         {
             name = "Reflection Probe";
-            synonyms = new string[] { "light probe", "cube map", "environment" };
         }
 
         public override bool hasPreview { get { return false; } }

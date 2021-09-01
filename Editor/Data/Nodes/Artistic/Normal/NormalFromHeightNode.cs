@@ -19,7 +19,6 @@ namespace UnityEditor.ShaderGraph
         public NormalFromHeightNode()
         {
             name = "Normal From Height";
-            synonyms = new string[] { "convert to normal", "bump map" };
             UpdateNodeAfterDeserialization();
         }
 

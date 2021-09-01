@@ -8,7 +8,6 @@ namespace UnityEditor.ShaderGraph
         public ArctangentNode()
         {
             name = "Arctangent";
-            synonyms = new string[] { "atan" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

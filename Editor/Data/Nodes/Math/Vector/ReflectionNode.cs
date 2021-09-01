@@ -9,7 +9,6 @@ namespace UnityEditor.ShaderGraph
         public ReflectionNode()
         {
             name = "Reflection";
-            synonyms = new string[] { "mirror" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

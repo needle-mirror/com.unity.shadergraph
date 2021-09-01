@@ -19,7 +19,6 @@ namespace UnityEditor.ShaderGraph
         public ChannelMaskNode()
         {
             name = "Channel Mask";
-            synonyms = new string[] { "component mask" };
             UpdateNodeAfterDeserialization();
         }
 

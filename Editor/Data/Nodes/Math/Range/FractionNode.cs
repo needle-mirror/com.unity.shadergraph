@@ -8,7 +8,6 @@ namespace UnityEditor.ShaderGraph
         public FractionNode()
         {
             name = "Fraction";
-            synonyms = new string[] { "remainder" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

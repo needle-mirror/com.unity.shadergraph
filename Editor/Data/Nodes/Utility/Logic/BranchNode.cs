@@ -9,7 +9,6 @@ namespace UnityEditor.ShaderGraph
         public BranchNode()
         {
             name = "Branch";
-            synonyms = new string[] { "switch", "if", "else" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

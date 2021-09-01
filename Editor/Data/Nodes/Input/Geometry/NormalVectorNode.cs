@@ -14,7 +14,6 @@ namespace UnityEditor.ShaderGraph
         public NormalVectorNode()
         {
             name = "Normal Vector";
-            synonyms = new string[] { "surface direction" };
             UpdateNodeAfterDeserialization();
         }
 

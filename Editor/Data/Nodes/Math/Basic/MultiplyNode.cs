@@ -15,7 +15,6 @@ namespace UnityEditor.ShaderGraph
         public MultiplyNode()
         {
             name = "Multiply";
-            synonyms = new string[] { "multiplication", "times", "x" };
             UpdateNodeAfterDeserialization();
         }
 

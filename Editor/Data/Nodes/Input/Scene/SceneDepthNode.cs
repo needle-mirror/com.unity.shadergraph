@@ -41,7 +41,6 @@ namespace UnityEditor.ShaderGraph
         public SceneDepthNode()
         {
             name = "Scene Depth";
-            synonyms = new string[] { "zbuffer", "zdepth" };
             UpdateNodeAfterDeserialization();
         }
 

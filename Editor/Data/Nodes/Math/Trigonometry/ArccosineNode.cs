@@ -8,7 +8,6 @@ namespace UnityEditor.ShaderGraph
         public ArccosineNode()
         {
             name = "Arccosine";
-            synonyms = new string[] { "acos" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

@@ -8,7 +8,6 @@ namespace UnityEditor.ShaderGraph
         public SaturateNode()
         {
             name = "Saturate";
-            synonyms = new string[] { "clamp" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

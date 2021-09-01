@@ -15,7 +15,6 @@ namespace UnityEditor.ShaderGraph
         public BakedGINode()
         {
             name = "Baked GI";
-            synonyms = new string[] { "global illumination" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

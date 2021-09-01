@@ -8,7 +8,6 @@ namespace UnityEditor.ShaderGraph
         public ReciprocalSquareRootNode()
         {
             name = "Reciprocal Square Root";
-            synonyms = new string[] { "rsqrt", "inversesqrt" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

@@ -9,7 +9,6 @@ namespace UnityEditor.ShaderGraph
         public DotProductNode()
         {
             name = "Dot Product";
-            synonyms = new string[] { "scalar product" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

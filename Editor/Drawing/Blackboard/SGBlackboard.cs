@@ -300,7 +300,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                     indicatorY = childAtInsertIndex.ChangeCoordinatesTo(this, new Vector2(0, -childAtInsertIndex.resolvedStyle.marginTop)).y;
                 }
 
-                m_DragIndicator.style.top = indicatorY - m_DragIndicator.resolvedStyle.height * 0.5f;
+                m_DragIndicator.style.top =  indicatorY - m_DragIndicator.resolvedStyle.height * 0.5f;
                 DragAndDrop.visualMode = DragAndDropVisualMode.Move;
             }
             else
@@ -559,7 +559,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             pathChangeAction.NewGraphPath = newPath;
             ViewModel.requestModelChangeAction(pathChangeAction);
 
-            m_SubTitleLabel.text = BlackboardUtils.FormatPath(newPath);
+            m_SubTitleLabel.text =  BlackboardUtils.FormatPath(newPath);
             m_EditPathCancelled = false;
         }
     }

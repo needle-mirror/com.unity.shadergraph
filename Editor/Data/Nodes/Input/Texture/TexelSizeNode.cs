@@ -21,7 +21,6 @@ namespace UnityEditor.ShaderGraph
         public Texture2DPropertiesNode()
         {
             name = "Texel Size";
-            synonyms = new string[] { "texture size" };
             UpdateNodeAfterDeserialization();
         }
 

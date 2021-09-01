@@ -17,7 +17,6 @@ namespace UnityEditor.ShaderGraph
         public Texture2DArrayAssetNode()
         {
             name = "Texture 2D Array Asset";
-            synonyms = new string[] { "stack", "pile" };
             UpdateNodeAfterDeserialization();
         }
 

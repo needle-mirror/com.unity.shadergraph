@@ -18,7 +18,6 @@ namespace UnityEditor.ShaderGraph
         public ViewDirectionNode()
         {
             name = "View Direction";
-            synonyms = new string[] { "eye direction" };
             UpdateNodeAfterDeserialization();
             onAfterVersionChange += () => { if (sgVersion > 0) owner.ClearErrorsForNode(this); };
         }

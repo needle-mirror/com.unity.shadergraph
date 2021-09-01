@@ -8,7 +8,6 @@ namespace UnityEditor.ShaderGraph
         public SquareRootNode()
         {
             name = "Square Root";
-            synonyms = new string[] { "sqrt" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

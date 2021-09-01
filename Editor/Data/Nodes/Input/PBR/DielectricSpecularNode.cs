@@ -24,7 +24,6 @@ namespace UnityEditor.ShaderGraph
         public DielectricSpecularNode()
         {
             name = "Dielectric Specular";
-            synonyms = new string[] { "reflectance" };
             UpdateNodeAfterDeserialization();
         }
 

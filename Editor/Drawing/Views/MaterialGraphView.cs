@@ -111,7 +111,10 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             graph.UpdateActiveBlocks(activeBlocks);
             this.m_PreviewManagerUpdateDelegate();
+            //Quick bugfix for 1327208. Can be fixed properly with GTF
+            Inspector.InspectorView.forceNodeView = false;
             this.m_InspectorUpdateDelegate();
+            Inspector.InspectorView.forceNodeView = true;
         }
 
         void ChangePrecision(GraphPrecision newGraphDefaultPrecision)
@@ -547,7 +550,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             graph.owner.RegisterCompleteObjectUndo("Delete Group and Contents");
             var groupItems = graph.GetItemsInGroup(data);
-            graph.RemoveElements(groupItems.OfType<AbstractMaterialNode>().ToArray(), new IEdge[] {}, new[] { data }, groupItems.OfType<StickyNoteData>().ToArray());
+            graph.RemoveElements(groupItems.OfType<AbstractMaterialNode>().ToArray(), new IEdge[] {}, new[] {data}, groupItems.OfType<StickyNoteData>().ToArray());
         }
 
         private void InitializePrecisionSubMenu(ContextualMenuPopulateEvent evt)
@@ -627,7 +630,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             // Color Picker is internal :(
             var t = typeof(EditorWindow).Assembly.GetTypes().FirstOrDefault(ty => ty.Name == "ColorPicker");
-            var m = t?.GetMethod("Show", new[] { typeof(Action<Color>), typeof(Color), typeof(bool), typeof(bool) });
+            var m = t?.GetMethod("Show", new[] {typeof(Action<Color>), typeof(Color), typeof(bool), typeof(bool)});
             if (m == null)
             {
                 Debug.LogWarning("Could not invoke Color Picker for ShaderGraph.");
@@ -655,7 +658,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
 
             graph.owner.RegisterCompleteObjectUndo("Change Node Color");
-            m.Invoke(null, new object[] { (Action<Color>)ApplyColor, defaultColor, true, false });
+            m.Invoke(null, new object[] {(Action<Color>)ApplyColor, defaultColor, true, false});
         }
 
         protected override bool canDeleteSelection
@@ -688,7 +691,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             position = contentViewContainer.WorldToLocal(position);
             string title = "New Note";
             string content = "Write something here";
-            var stickyNoteData = new StickyNoteData(title, content, new Rect(position.x, position.y, 200, 160));
+            var stickyNoteData  = new StickyNoteData(title, content, new Rect(position.x, position.y, 200, 160));
             graph.owner.RegisterCompleteObjectUndo("Create Sticky Note");
             graph.AddStickyNote(stickyNoteData);
         }

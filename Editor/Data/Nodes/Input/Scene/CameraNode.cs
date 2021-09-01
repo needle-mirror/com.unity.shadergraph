@@ -27,7 +27,6 @@ namespace UnityEditor.ShaderGraph
         public CameraNode()
         {
             name = "Camera";
-            synonyms = new string[] { "position", "direction", "orthographic", "near plane", "far plane", "width", "height" };
             UpdateNodeAfterDeserialization();
         }
 

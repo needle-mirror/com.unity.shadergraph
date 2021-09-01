@@ -17,7 +17,6 @@ namespace UnityEditor.ShaderGraph
         public ReciprocalNode()
         {
             name = "Reciprocal";
-            synonyms = new string[] { "rcp" };
         }
 
         [SerializeField]

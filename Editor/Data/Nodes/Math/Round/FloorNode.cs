@@ -8,7 +8,6 @@ namespace UnityEditor.ShaderGraph
         public FloorNode()
         {
             name = "Floor";
-            synonyms = new string[] { "down" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

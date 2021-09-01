@@ -16,7 +16,6 @@ namespace UnityEditor.ShaderGraph
         public ViewVectorNode()
         {
             name = "View Vector";
-            synonyms = new string[] { "eye vector" };
         }
 
         public virtual List<CoordinateSpace> validSpaces => new List<CoordinateSpace> { CoordinateSpace.Object, CoordinateSpace.View, CoordinateSpace.World, CoordinateSpace.Tangent };

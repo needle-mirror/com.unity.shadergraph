@@ -13,7 +13,6 @@ namespace UnityEditor.ShaderGraph
         public BitangentVectorNode()
         {
             name = "Bitangent Vector";
-            synonyms = new string[] { "binormal" };
             UpdateNodeAfterDeserialization();
         }
 

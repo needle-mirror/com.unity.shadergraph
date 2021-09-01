@@ -15,7 +15,6 @@ namespace UnityEditor.ShaderGraph
         public ObjectNode()
         {
             name = "Object";
-            synonyms = new string[] { "position", "scale" };
             UpdateNodeAfterDeserialization();
         }
 

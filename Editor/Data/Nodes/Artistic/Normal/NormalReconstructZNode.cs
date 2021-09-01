@@ -9,7 +9,6 @@ namespace UnityEditor.ShaderGraph
         public NormalReconstructZNode()
         {
             name = "Normal Reconstruct Z";
-            synonyms = new string[] { "derive z" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

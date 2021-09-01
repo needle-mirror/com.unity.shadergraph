@@ -18,7 +18,6 @@ namespace UnityEditor.ShaderGraph
         public IntegerNode()
         {
             name = "Integer";
-            synonyms = new string[] { "whole number" };
             UpdateNodeAfterDeserialization();
         }
 

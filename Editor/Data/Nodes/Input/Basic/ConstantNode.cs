@@ -50,7 +50,6 @@ namespace UnityEditor.ShaderGraph
         public ConstantNode()
         {
             name = "Constant";
-            synonyms = new string[] { "pi", "tau", "phi" };
             UpdateNodeAfterDeserialization();
         }
 

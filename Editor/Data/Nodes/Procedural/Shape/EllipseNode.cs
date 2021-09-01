@@ -9,7 +9,6 @@ namespace UnityEditor.ShaderGraph
         public EllipseNode()
         {
             name = "Ellipse";
-            synonyms = new string[] { "circle" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

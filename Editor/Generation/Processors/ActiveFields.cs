@@ -35,7 +35,7 @@ namespace UnityEditor.ShaderGraph.Internal
 
         public IEnumerable<FieldDescriptor> Union(FieldNamePairStorage other)
         {
-            var output = new HashSet<FieldDescriptor>(m_fieldDescriptors);
+            var output =  new HashSet<FieldDescriptor>(m_fieldDescriptors);
             output.UnionWith(other.m_fieldDescriptors);
             return output;
         }

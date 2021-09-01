@@ -8,7 +8,6 @@ namespace UnityEditor.ShaderGraph
         public AddNode()
         {
             name = "Add";
-            synonyms = new string[] { "addition", "sum", "plus" };
         }
 
         protected override MethodInfo GetFunctionToConvert()

@@ -125,8 +125,7 @@ Shader ""Hidden/GraphErrorShader2""
             var textGraph = File.ReadAllText(path, Encoding.UTF8);
             var graph = new GraphData
             {
-                messageManager = new MessageManager(),
-                assetGuid = AssetDatabase.AssetPathToGUID(path)
+                messageManager = new MessageManager(), assetGuid = AssetDatabase.AssetPathToGUID(path)
             };
             MultiJson.Deserialize(graph, textGraph);
             graph.OnEnable();
@@ -245,7 +244,7 @@ Shader ""Hidden/GraphErrorShader2""
                 if (property is VirtualTextureShaderProperty virtualTextureShaderProperty)
                     inputInspectorDataList.Add(MinimalCategoryData.ProcessVirtualTextureProperty(virtualTextureShaderProperty));
                 else
-                    inputInspectorDataList.Add(new GraphInputData() { referenceName = property.referenceName, propertyType = property.propertyType, isKeyword = false });
+                    inputInspectorDataList.Add(new GraphInputData() { referenceName = property.referenceName, propertyType = property.propertyType, isKeyword = false});
             }
             foreach (ShaderKeyword keyword in graph.keywords)
             {
@@ -257,7 +256,7 @@ Shader ""Hidden/GraphErrorShader2""
                 if (keyword.keywordType == KeywordType.Boolean && keyword.referenceName.Contains("_ON"))
                     sanitizedReferenceName = sanitizedReferenceName.Replace("_ON", String.Empty);
 
-                inputInspectorDataList.Add(new GraphInputData() { referenceName = sanitizedReferenceName, keywordType = keyword.keywordType, isKeyword = true });
+                inputInspectorDataList.Add(new GraphInputData() { referenceName = sanitizedReferenceName, keywordType = keyword.keywordType, isKeyword = true});
             }
 
             sgMetadata.categoryDatas = new List<MinimalCategoryData>();
@@ -293,7 +292,7 @@ Shader ""Hidden/GraphErrorShader2""
                         if (keyword.keywordType == KeywordType.Boolean && keyword.referenceName.Contains("_ON"))
                             sanitizedReferenceName = sanitizedReferenceName.Replace("_ON", String.Empty);
 
-                        propData = new GraphInputData() { referenceName = sanitizedReferenceName, keywordType = keyword.keywordType, isKeyword = true };
+                        propData = new GraphInputData() { referenceName = sanitizedReferenceName, keywordType = keyword.keywordType, isKeyword = true};
                     }
                     else
                     {
@@ -456,8 +455,7 @@ Shader ""Hidden/GraphErrorShader2""
             var textGraph = File.ReadAllText(path, Encoding.UTF8);
             graph = new GraphData
             {
-                messageManager = new MessageManager(),
-                assetGuid = AssetDatabase.AssetPathToGUID(path)
+                messageManager = new MessageManager(), assetGuid = AssetDatabase.AssetPathToGUID(path)
             };
             MultiJson.Deserialize(graph, textGraph);
             graph.OnEnable();
@@ -471,8 +469,7 @@ Shader ""Hidden/GraphErrorShader2""
             var textGraph = File.ReadAllText(path, Encoding.UTF8);
             GraphData graph = new GraphData
             {
-                messageManager = new MessageManager(),
-                assetGuid = AssetDatabase.AssetPathToGUID(path)
+                messageManager = new MessageManager(), assetGuid = AssetDatabase.AssetPathToGUID(path)
             };
             MultiJson.Deserialize(graph, textGraph);
             graph.OnEnable();
