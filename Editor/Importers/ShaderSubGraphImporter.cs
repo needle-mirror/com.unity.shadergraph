@@ -66,7 +66,9 @@ namespace UnityEditor.ShaderGraph
             var messageManager = new MessageManager();
             var graphData = new GraphData
             {
-                isSubGraph = true, assetGuid = subGraphGuid, messageManager = messageManager
+                isSubGraph = true,
+                assetGuid = subGraphGuid,
+                messageManager = messageManager
             };
             MultiJson.Deserialize(graphData, textGraph);
 

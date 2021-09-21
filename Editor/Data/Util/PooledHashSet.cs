@@ -37,7 +37,7 @@ namespace UnityEditor.ShaderGraph
 #endif
         }
 
-// Destructor causes some GC alloc so only do this sanity check in debug build
+        // Destructor causes some GC alloc so only do this sanity check in debug build
 #if DEBUG
         ~PooledHashSet()
         {

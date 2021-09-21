@@ -13,7 +13,7 @@ namespace UnityEditor.ShaderGraph
     [Serializable]
     abstract class MaterialSlot : JsonObject
     {
-        const string k_NotInit =  "Not Initilaized";
+        const string k_NotInit = "Not Initilaized";
 
         [SerializeField]
         int m_Id;
