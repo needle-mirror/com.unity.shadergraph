@@ -9,7 +9,7 @@ namespace UnityEditor.ShaderGraph
         static Stack<PooledList<T>> s_Pool = new Stack<PooledList<T>>();
         bool m_Active;
 
-        PooledList() {}
+        PooledList() { }
 
         public static PooledList<T> Get()
         {

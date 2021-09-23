@@ -27,7 +27,7 @@ namespace UnityEditor.Graphing.IntegrationTests
             }
         }
         interface ITestInterface
-        {}
+        { }
 
         [Serializable]
         class SimpleSerializeClass : ITestInterface

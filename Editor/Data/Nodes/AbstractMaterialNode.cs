@@ -951,7 +951,7 @@ namespace UnityEditor.ShaderGraph
         }
 
         public virtual void UpdateNodeAfterDeserialization()
-        {}
+        { }
 
         public bool IsSlotConnected(int slotId)
         {
@@ -959,7 +959,7 @@ namespace UnityEditor.ShaderGraph
             return slot != null && owner.GetEdges(slot.slotReference).Any();
         }
 
-        public virtual void Setup() {}
+        public virtual void Setup() { }
 
         protected void EnqueSlotsForSerialization()
         {

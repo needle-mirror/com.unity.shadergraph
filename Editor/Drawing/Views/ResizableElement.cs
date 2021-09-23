@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace UnityEditor.ShaderGraph.Drawing
 {
     class ResizableElementFactory : UxmlFactory<ResizableElement>
-    {}
+    { }
 
     class ResizableElement : VisualElement
     {

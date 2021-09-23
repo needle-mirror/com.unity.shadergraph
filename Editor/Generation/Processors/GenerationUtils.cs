@@ -128,7 +128,7 @@ namespace UnityEditor.ShaderGraph
             {
                 name = "Packed" + shaderStruct.name,
                 packFields = true,
-                fields = new FieldDescriptor[] {}
+                fields = new FieldDescriptor[] { }
             };
             List<FieldDescriptor> packedSubscripts = new List<FieldDescriptor>();
             List<FieldDescriptor> postUnpackedSubscripts = new List<FieldDescriptor>();

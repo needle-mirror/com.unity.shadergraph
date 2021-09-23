@@ -19,7 +19,7 @@ namespace UnityEditor.ShaderGraph.Internal
         public bool gpuInstanced
         {
             get { return false; }
-            set {}
+            set { }
         }
 
         internal virtual string GetHLSLVariableName(bool isSubgraphProperty, GenerationMode mode)

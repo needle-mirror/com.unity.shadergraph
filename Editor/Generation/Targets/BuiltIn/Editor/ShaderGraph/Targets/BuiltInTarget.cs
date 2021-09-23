@@ -334,7 +334,7 @@ namespace UnityEditor.Rendering.BuiltIn.ShaderGraph
                 customEditorGUI = m_CustomGUIField.value;
                 onChange();
             });
-            context.AddProperty("Custom Editor GUI", m_CustomGUIField, (evt) => {});
+            context.AddProperty("Custom Editor GUI", m_CustomGUIField, (evt) => { });
         }
 
         public void AddDefaultMaterialOverrideGUI(ref TargetPropertyGUIContext context, Action onChange, Action<String> registerUndo)

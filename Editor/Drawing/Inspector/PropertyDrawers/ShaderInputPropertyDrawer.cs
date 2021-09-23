@@ -1709,7 +1709,7 @@ namespace UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers
                 ids.Add(dropdownEntry.id);
             }
 
-            for (int x = 1;; x++)
+            for (int x = 1; ; x++)
             {
                 if (!ids.Contains(x))
                     return x;

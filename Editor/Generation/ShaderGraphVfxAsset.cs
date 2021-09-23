@@ -205,7 +205,7 @@ namespace UnityEditor.ShaderGraph.Internal
             m_Data = null;
         }
 
-        void ISerializationCallbackReceiver.OnBeforeSerialize() {}
+        void ISerializationCallbackReceiver.OnBeforeSerialize() { }
 
         public GraphCode GetCode(OutputMetadata[] outputs)
         {

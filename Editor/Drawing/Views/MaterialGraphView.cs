@@ -50,7 +50,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             m_UndoRedoPerformedMethodInfo = graphViewType?.GetMethod("UndoRedoPerformed",
                 BindingFlags.FlattenHierarchy | BindingFlags.Instance | BindingFlags.NonPublic,
                 null,
-                new Type[] {},
+                new Type[] { },
                 null);
         }
 
@@ -111,7 +111,10 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             graph.UpdateActiveBlocks(activeBlocks);
             this.m_PreviewManagerUpdateDelegate();
+            //Quick bugfix for 1327208. Can be fixed properly with GTF
+            Inspector.InspectorView.forceNodeView = false;
             this.m_InspectorUpdateDelegate();
+            Inspector.InspectorView.forceNodeView = true;
         }
 
         void ChangePrecision(GraphPrecision newGraphDefaultPrecision)
@@ -547,7 +550,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             graph.owner.RegisterCompleteObjectUndo("Delete Group and Contents");
             var groupItems = graph.GetItemsInGroup(data);
-            graph.RemoveElements(groupItems.OfType<AbstractMaterialNode>().ToArray(), new IEdge[] {}, new[] { data }, groupItems.OfType<StickyNoteData>().ToArray());
+            graph.RemoveElements(groupItems.OfType<AbstractMaterialNode>().ToArray(), new IEdge[] { }, new[] { data }, groupItems.OfType<StickyNoteData>().ToArray());
         }
 
         private void InitializePrecisionSubMenu(ContextualMenuPopulateEvent evt)
@@ -1076,7 +1079,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         // Updates selected graph elements after undo/redo
         internal void RestorePersistentSelectionAfterUndoRedo()
         {
-            m_UndoRedoPerformedMethodInfo?.Invoke(this, new object[] {});
+            m_UndoRedoPerformedMethodInfo?.Invoke(this, new object[] { });
         }
 
         #region Drag and drop

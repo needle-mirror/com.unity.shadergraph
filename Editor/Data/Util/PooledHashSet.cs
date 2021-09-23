@@ -9,7 +9,7 @@ namespace UnityEditor.ShaderGraph
         static Stack<PooledHashSet<T>> s_Pool = new Stack<PooledHashSet<T>>();
         bool m_Active;
 
-        PooledHashSet() {}
+        PooledHashSet() { }
 
         public static PooledHashSet<T> Get()
         {

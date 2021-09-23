@@ -107,7 +107,7 @@ namespace UnityEditor.ShaderGraph.Internal
 
             public IEnumerable<FieldDescriptor> fields => m_Source.baseStorage.fields;
             public int instanceCount => 1;
-            public int permutationIndex => - 1;
+            public int permutationIndex => -1;
             public KeywordDependentCollection.KeywordPermutationInstanceType type => KeywordDependentCollection.KeywordPermutationInstanceType.Base;
             public IEnumerable<IActiveFields> instances => Enumerable.Repeat<IActiveFields>(this, 1);
 
@@ -184,7 +184,7 @@ namespace UnityEditor.ShaderGraph.Internal
 
             public IEnumerable<FieldDescriptor> fields => m_Source.baseStorage.fields;
             public int instanceCount => 1;
-            public int permutationIndex => - 1;
+            public int permutationIndex => -1;
             public KeywordDependentCollection.KeywordPermutationInstanceType type => KeywordDependentCollection.KeywordPermutationInstanceType.Base;
 
             internal NoPermutation(ActiveFields source)
