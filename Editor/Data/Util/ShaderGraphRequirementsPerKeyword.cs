@@ -18,7 +18,7 @@ namespace UnityEditor.ShaderGraph.Internal
         {
             void SetRequirements(ShaderGraphRequirements value);
 
-            ShaderGraphRequirements requirements { get; set;  }
+            ShaderGraphRequirements requirements { get; set; }
         }
 
         public interface IRequirementsSet : KeywordDependentCollection.ISet<IRequirements>
