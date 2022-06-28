@@ -16,7 +16,6 @@ namespace UnityEditor.ShaderGraph
         void SetColor(Color newColor);
         void ResetColor();
         void UpdatePortInputTypes();
-        void UpdateDropdownEntries();
         void OnModified(ModificationScope scope);
         void AttachMessage(string errString, ShaderCompilerMessageSeverity severity);
         void ClearMessage();

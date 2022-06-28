@@ -36,18 +36,26 @@ namespace UnityEditor.ShaderGraph
         public override string documentationURL => Documentation.GetPageLink("Sub-graph");
 
         void ValidateShaderStage()
-        {
-            List<MaterialSlot> slots = new List<MaterialSlot>();
-            GetInputSlots(slots);
+            {
+                List<MaterialSlot> slots = new List<MaterialSlot>();
+                GetInputSlots(slots);
 
-            // Reset all input slots back to All, otherwise they'll be incorrectly configured when traversing below
-            foreach (MaterialSlot slot in slots)
+                foreach(MaterialSlot slot in slots)
                 slot.stageCapability = ShaderStageCapability.All;
 
+            var effectiveStage = ShaderStageCapability.All;
             foreach (var slot in slots)
-            {
-                slot.stageCapability = NodeUtils.GetEffectiveShaderStageCapability(slot, true);
+                {
+                var stage = NodeUtils.GetEffectiveShaderStageCapability(slot, true);
+                if (stage != ShaderStageCapability.All)
+                {
+                    effectiveStage = stage;
+                    break;
             }
+        }
+
+            foreach(MaterialSlot slot in slots)
+                slot.stageCapability = effectiveStage;
         }
 
         void ValidateSlotName()

@@ -3,8 +3,7 @@ namespace UnityEditor.ShaderGraph
     enum GenerationMode
     {
         Preview,
-        ForReals,
-        VFX
+        ForReals
     }
     static class GenerationModeExtensions
     {

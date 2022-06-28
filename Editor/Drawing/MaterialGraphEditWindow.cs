@@ -40,7 +40,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         string m_LastSerializedFileContents;
 
         [NonSerialized]
-        HashSet<string> m_ChangedFileDependencyGUIDs = new HashSet<string>();
+        HashSet<string> m_ChangedFileDependencies = new HashSet<string>();
 
         ColorSpace m_ColorSpace;
         RenderPipelineAsset m_RenderPipelineAsset;
@@ -51,10 +51,6 @@ namespace UnityEditor.ShaderGraph.Drawing
         bool m_HasError;
         [NonSerialized]
         bool m_ProTheme;
-        [NonSerialized]
-        int m_customInterpWarn;
-        [NonSerialized]
-        int m_customInterpErr;
 
         [SerializeField]
         bool m_AssetMaybeChangedOnDisk;
@@ -221,22 +217,6 @@ namespace UnityEditor.ShaderGraph.Drawing
                 }
             }
 
-            bool revalidate = false;
-            if (m_customInterpWarn != ShaderGraphProjectSettings.instance.customInterpolatorWarningThreshold)
-            {
-                m_customInterpWarn = ShaderGraphProjectSettings.instance.customInterpolatorWarningThreshold;
-                revalidate = true;
-            }
-            if (m_customInterpErr != ShaderGraphProjectSettings.instance.customInterpolatorErrorThreshold)
-            {
-                m_customInterpErr = ShaderGraphProjectSettings.instance.customInterpolatorErrorThreshold;
-                revalidate = true;
-            }
-            if (revalidate)
-            {
-                graphEditorView?.graphView?.graph?.ValidateGraph();
-            }
-
             if (m_AssetMaybeChangedOnDisk)
             {
                 m_AssetMaybeChangedOnDisk = false;
@@ -289,10 +269,8 @@ namespace UnityEditor.ShaderGraph.Drawing
                 {
                     messageManager.ClearAll();
                     materialGraph.messageManager = messageManager;
-                    string assetPath = AssetDatabase.GUIDToAssetPath(selectedGuid);
-                    string graphName = Path.GetFileNameWithoutExtension(assetPath);
-
-                    graphEditorView = new GraphEditorView(this, materialGraph, messageManager, graphName)
+                    var asset = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(selectedGuid));
+                    graphEditorView = new GraphEditorView(this, materialGraph, messageManager)
                     {
                         viewDataKey = selectedGuid,
                     };
@@ -304,41 +282,33 @@ namespace UnityEditor.ShaderGraph.Drawing
                     updateTitle = true;
                 }
 
-                if (m_ChangedFileDependencyGUIDs.Count > 0 && graphObject != null && graphObject.graph != null)
+                if (m_ChangedFileDependencies.Count > 0 && graphObject != null && graphObject.graph != null)
                 {
                     bool reloadedSomething = false;
                     var subGraphNodes = graphObject.graph.GetNodes<SubGraphNode>();
                     foreach (var subGraphNode in subGraphNodes)
                     {
-                        var reloaded = subGraphNode.Reload(m_ChangedFileDependencyGUIDs);
+                        var reloaded = subGraphNode.Reload(m_ChangedFileDependencies);
                         reloadedSomething |= reloaded;
                     }
-                    if (subGraphNodes.Count() > 0)
+                    if(subGraphNodes.Count() > 0)
                     {
                         // Keywords always need to be updated to test against variant limit
                         // No Keywords may indicate removal and this may have now made the Graph valid again
                         // Need to validate Graph to clear errors in this case
                         materialGraph.OnKeywordChanged();
-
-                        UpdateDropdownEntries();
-                        materialGraph.OnDropdownChanged();
                     }
                     foreach (var customFunctionNode in graphObject.graph.GetNodes<CustomFunctionNode>())
                     {
-                        var reloaded = customFunctionNode.Reload(m_ChangedFileDependencyGUIDs);
+                        var reloaded = customFunctionNode.Reload(m_ChangedFileDependencies);
                         reloadedSomething |= reloaded;
                     }
 
-                    // reloading files may change serialization
+                    // reloading files may change serilization
                     if (reloadedSomething)
-                    {
                         updateTitle = true;
 
-                        // may also need to re-run validation/concretization
-                        graphObject.Validate();
-                    }
-
-                    m_ChangedFileDependencyGUIDs.Clear();
+                    m_ChangedFileDependencies.Clear();
                 }
 
                 var wasUndoRedoPerformed = graphObject.wasUndoRedoPerformed;
@@ -348,13 +318,13 @@ namespace UnityEditor.ShaderGraph.Drawing
                     graphEditorView.HandleGraphChanges(true);
                     graphObject.graph.ClearChanges();
                     graphObject.HandleUndoRedo();
+
                 }
 
                 if (graphObject.isDirty || wasUndoRedoPerformed)
                 {
                     updateTitle = true;
                     graphObject.isDirty = false;
-                    hasUnsavedChanges = false;
                 }
 
                 // Called again to handle changes from deserialization in case an undo/redo was performed
@@ -374,37 +344,29 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
         }
 
-        public void ReloadSubGraphsOnNextUpdate(List<string> changedFileGUIDs)
+        public void ReloadSubGraphsOnNextUpdate(List<string> changedFiles)
         {
-            foreach (var changedFileGUID in changedFileGUIDs)
+            foreach (var changedFile in changedFiles)
             {
-                m_ChangedFileDependencyGUIDs.Add(changedFileGUID);
-            }
-        }
-
-        void UpdateDropdownEntries()
-        {
-            var subGraphNodes = graphObject.graph.GetNodes<SubGraphNode>();
-            foreach (var subGraphNode in subGraphNodes)
-            {
-                var nodeView = graphEditorView.graphView.nodes.ToList().OfType<IShaderNodeView>()
-                    .FirstOrDefault(p => p.node != null && p.node == subGraphNode);
-                if (nodeView != null)
-                {
-                    nodeView.UpdateDropdownEntries();
-                }
+                m_ChangedFileDependencies.Add(changedFile);
             }
         }
 
         void OnEnable()
         {
             this.SetAntiAliasing(4);
+
+            // subscribe this event so it is registered on assembly reloads (we don't run Initialize on assembly reload)
+            // doing remove before add ensures we never subscribe twice
+            EditorApplication.wantsToQuit -= PromptSaveIfDirtyOnQuit;
+            EditorApplication.wantsToQuit += PromptSaveIfDirtyOnQuit;
         }
 
         void OnDisable()
         {
             graphEditorView = null;
             messageManager.ClearAll();
+            EditorApplication.wantsToQuit -= PromptSaveIfDirtyOnQuit;
         }
 
         // returns true only when the file on disk doesn't match the graph we last loaded or saved to disk (i.e. someone else changed it)
@@ -464,16 +426,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             else
             {
                 if (GraphHasChangedSinceLastSerialization())
-                {
-                    hasUnsavedChanges = true;
-                    // This is the message EditorWindow will show when prompting to close while dirty
-                    saveChangesMessage = GetSaveChangesMessage();
-                }
-                else
-                {
-                    hasUnsavedChanges = false;
-                    saveChangesMessage = "";
-                }
+                    title = title + "*";
                 if (!AssetFileExists())
                     title = title + " (deleted)";
             }
@@ -484,9 +437,9 @@ namespace UnityEditor.ShaderGraph.Drawing
             {
                 string theme = EditorGUIUtility.isProSkin ? "_dark" : "_light";
                 if (isSubGraph)
-                    icon = Resources.Load<Texture2D>("Icons/sg_subgraph_icon_gray" + theme);
+                    icon = Resources.Load<Texture2D>("Icons/sg_subgraph_icon_gray" + theme + "@16");
                 else
-                    icon = Resources.Load<Texture2D>("Icons/sg_graph_icon_gray" + theme);
+                    icon = Resources.Load<Texture2D>("Icons/sg_graph_icon_gray" + theme + "@16");
             }
 
             titleContent = new GUIContent(title, icon);
@@ -494,11 +447,6 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         void OnDestroy()
         {
-            // Prompting the user if they want to close is mostly handled via the EditorWindow's system (hasUnsavedChanges).
-            // There's unfortunately a code path (Reload Window) that doesn't go through this path. The old logic is left
-            // here as a fallback to catch this. This has one edge case with "Reload Window" -> "Cancel" which will produce
-            // two shader graph windows: one unmodified (that the editor opens) and one modified (that we open below).
-
             // we are closing the shadergraph window
             MaterialGraphEditWindow newWindow = null;
             if (!PromptSaveIfDirtyOnQuit())
@@ -592,7 +540,6 @@ namespace UnityEditor.ShaderGraph.Drawing
                 }
 
                 OnSaveGraph(path);
-                hasUnsavedChanges = false;
             }
 
             UpdateTitle();
@@ -602,17 +549,17 @@ namespace UnityEditor.ShaderGraph.Drawing
 
         void OnSaveGraph(string path)
         {
-            if (GraphData.onSaveGraph == null)
+            if(GraphData.onSaveGraph == null)
                 return;
 
-            if (graphObject.graph.isSubGraph)
+            if(graphObject.graph.isSubGraph)
                 return;
 
             var shader = AssetDatabase.LoadAssetAtPath<Shader>(path);
-            if (shader == null)
+            if(shader == null)
                 return;
 
-            foreach (var target in graphObject.graph.activeTargets)
+            foreach(var target in graphObject.graph.activeTargets)
             {
                 GraphData.onSaveGraph(shader, target.saveContext);
             }
@@ -695,7 +642,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             // Friendly warning that the user is generating a subgraph that would overwrite the one they are currently working on.
             if (AssetDatabase.AssetPathToGUID(path) == selectedGuid)
-            {
+            {             
                 if (!EditorUtility.DisplayDialog("Overwrite Current Subgraph", "Do you want to overwrite this Sub Graph that you are currently working on? You cannot undo this operation.", "Yes", "Cancel"))
                 {
                     path = "";
@@ -731,8 +678,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             bounds.center = Vector2.zero;
 
             // Collect graph inputs
-            var graphInputs = graphView.selection.OfType<SGBlackboardField>().Select(x => x.userData as ShaderInput);
-            var categories = graphView.selection.OfType<SGBlackboardCategory>().Select(x => x.userData as CategoryData);
+            var graphInputs = graphView.selection.OfType<BlackboardField>().Select(x => x.userData as ShaderInput);
 
             // Collect the property nodes and get the corresponding properties
             var propertyNodes = graphView.selection.OfType<IShaderNodeView>().Where(x => (x.node is PropertyNode)).Select(x => ((PropertyNode)x.node).property);
@@ -740,19 +686,14 @@ namespace UnityEditor.ShaderGraph.Drawing
 
             // Collect the keyword nodes and get the corresponding keywords
             var keywordNodes = graphView.selection.OfType<IShaderNodeView>().Where(x => (x.node is KeywordNode)).Select(x => ((KeywordNode)x.node).keyword);
-            var dropdownNodes = graphView.selection.OfType<IShaderNodeView>().Where(x => (x.node is DropdownNode)).Select(x => ((DropdownNode)x.node).dropdown);
-
             var metaKeywords = graphView.graph.keywords.Where(x => keywordNodes.Contains(x));
-            var metaDropdowns = graphView.graph.dropdowns.Where(x => dropdownNodes.Contains(x));
 
             var copyPasteGraph = new CopyPasteGraph(graphView.selection.OfType<ShaderGroup>().Select(x => x.userData),
                 nodes,
                 graphView.selection.OfType<Edge>().Select(x => x.userData as Graphing.Edge),
                 graphInputs,
-                categories,
                 metaProperties,
                 metaKeywords,
-                metaDropdowns,
                 graphView.selection.OfType<StickyNote>().Select(x => x.userData),
                 true,
                 false);
@@ -776,7 +717,10 @@ namespace UnityEditor.ShaderGraph.Drawing
             // Always copy deserialized keyword inputs
             foreach (ShaderKeyword keyword in deserialized.metaKeywords)
             {
-                var copiedInput = (ShaderKeyword)subGraph.AddCopyOfShaderInput(keyword);
+                var copiedInput = (ShaderKeyword)keyword.Copy();
+                subGraph.SanitizeGraphInputName(copiedInput);
+                subGraph.SanitizeGraphInputReferenceName(copiedInput, keyword.overrideReferenceName);
+                subGraph.AddGraphInput(copiedInput);
 
                 // Update the keyword nodes that depends on the copied keyword
                 var dependentKeywordNodes = deserialized.GetNodes<KeywordNode>().Where(x => x.keyword == keyword);
@@ -784,20 +728,6 @@ namespace UnityEditor.ShaderGraph.Drawing
                 {
                     node.owner = graphView.graph;
                     node.keyword = copiedInput;
-                }
-            }
-
-            // Always copy deserialized dropdown inputs
-            foreach (ShaderDropdown dropdown in deserialized.metaDropdowns)
-            {
-                var copiedInput = (ShaderDropdown)subGraph.AddCopyOfShaderInput(dropdown);
-
-                // Update the dropdown nodes that depends on the copied dropdown
-                var dependentDropdownNodes = deserialized.GetNodes<DropdownNode>().Where(x => x.dropdown == dropdown);
-                foreach (var node in dependentDropdownNodes)
-                {
-                    node.owner = graphView.graph;
-                    node.dropdown = copiedInput;
                 }
             }
 
@@ -954,11 +884,11 @@ namespace UnityEditor.ShaderGraph.Drawing
                             throw new ArgumentOutOfRangeException();
                     }
 
-                    var propName = fromProperty != null
+                    prop.displayName = fromProperty != null
                         ? fromProperty.displayName
                         : fromSlot.concreteValueType.ToString();
-                    prop.SetDisplayNameAndSanitizeForGraph(subGraph, propName);
-
+                    prop.displayName = GraphUtil.SanitizeName(subGraph.addedInputs.Select(p => p.displayName), "{0} ({1})",
+                        prop.displayName);
                     subGraph.AddGraphInput(prop);
                     if (fromProperty != null)
                     {
@@ -994,9 +924,9 @@ namespace UnityEditor.ShaderGraph.Drawing
                         int i;
                         var inputs = edge.inputSlot.node.GetInputSlots<MaterialSlot>().ToList();
 
-                        for (i = 0; i < inputs.Count; ++i)
+                        for(i = 0; i < inputs.Count; ++i)
                         {
-                            if (inputs[i].slotReference.slotId == edge.inputSlot.slotId)
+                            if(inputs[i].slotReference.slotId == edge.inputSlot.slotId)
                             {
                                 break;
                             }
@@ -1091,28 +1021,28 @@ namespace UnityEditor.ShaderGraph.Drawing
                 graphView.selection.OfType<StickyNote>().Select(x => x.userData).ToArray());
 
             List<GraphElement> moved = new List<GraphElement>();
-            foreach (var nodeView in graphView.selection.OfType<IShaderNodeView>())
+            foreach(var nodeView in graphView.selection.OfType<IShaderNodeView>())
             {
                 var node = nodeView.node;
-                if (graphView.graph.removedNodes.Contains(node) || node is SubGraphOutputNode)
+                if(graphView.graph.removedNodes.Contains(node) || node is SubGraphOutputNode)
                 {
                     continue;
                 }
 
                 var edges = graphView.graph.GetEdges(node);
                 int numEdges = edges.Count();
-                if (numEdges == 0)
+                if(numEdges == 0)
                 {
                     graphView.graph.RemoveNode(node);
                 }
-                else if (numEdges == 1 && edges.First().inputSlot.node != node) //its an output edge
+                else if(numEdges == 1 && edges.First().inputSlot.node != node) //its an output edge
                 {
                     var edge = edges.First();
                     int i;
                     var inputs = edge.inputSlot.node.GetInputSlots<MaterialSlot>().ToList();
-                    for (i = 0; i < inputs.Count; ++i)
+                    for(i = 0; i < inputs.Count; ++i)
                     {
-                        if (inputs[i].slotReference.slotId == edge.inputSlot.slotId)
+                        if(inputs[i].slotReference.slotId == edge.inputSlot.slotId)
                         {
                             break;
                         }
@@ -1135,6 +1065,8 @@ namespace UnityEditor.ShaderGraph.Drawing
             // for example, if the graph of a closing window was dirty, but could not be saved
             try
             {
+                EditorApplication.wantsToQuit -= PromptSaveIfDirtyOnQuit;
+
                 selectedGuid = other.selectedGuid;
 
                 graphObject = CreateInstance<GraphObject>();
@@ -1146,6 +1078,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 UpdateTitle();
 
                 Repaint();
+                EditorApplication.wantsToQuit += PromptSaveIfDirtyOnQuit;
             }
             catch (Exception e)
             {
@@ -1163,6 +1096,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             try
             {
+                EditorApplication.wantsToQuit -= PromptSaveIfDirtyOnQuit;
                 m_ColorSpace = PlayerSettings.colorSpace;
                 m_RenderPipelineAsset = GraphicsSettings.renderPipelineAsset;
 
@@ -1175,7 +1109,6 @@ namespace UnityEditor.ShaderGraph.Drawing
 
                 if (selectedGuid == assetGuid)
                     return;
-
 
                 var path = AssetDatabase.GetAssetPath(asset);
                 var extension = Path.GetExtension(path);
@@ -1198,7 +1131,6 @@ namespace UnityEditor.ShaderGraph.Drawing
                 }
 
                 selectedGuid = assetGuid;
-                string graphName = Path.GetFileNameWithoutExtension(path);
 
                 using (GraphLoadMarker.Auto())
                 {
@@ -1216,7 +1148,7 @@ namespace UnityEditor.ShaderGraph.Drawing
 
                 using (CreateGraphEditorViewMarker.Auto())
                 {
-                    graphEditorView = new GraphEditorView(this, m_GraphObject.graph, messageManager, graphName)
+                    graphEditorView = new GraphEditorView(this, m_GraphObject.graph, messageManager)
                     {
                         viewDataKey = selectedGuid,
                     };
@@ -1225,6 +1157,7 @@ namespace UnityEditor.ShaderGraph.Drawing
                 UpdateTitle();
 
                 Repaint();
+                EditorApplication.wantsToQuit += PromptSaveIfDirtyOnQuit;
             }
             catch (Exception)
             {
@@ -1240,7 +1173,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         {
             var filePath = AssetDatabase.GUIDToAssetPath(selectedGuid);
             return FileUtilities.SafeReadAllText(filePath);
-        }
+       }
 
         // returns true when the user is OK with closing the window or application (either they've saved dirty content, or are ok with losing it)
         // returns false when the user wants to cancel closing the window or application
@@ -1253,14 +1186,14 @@ namespace UnityEditor.ShaderGraph.Drawing
                 if (!AssetFileExists())
                     return DisplayDeletedFromDiskDialog(false);
 
-                // If there are unsaved modifications, ask the user what to do.
-                // If the editor has already handled this check we'll no longer have unsaved changes
-                // (either they saved or they discarded, both of which will set hasUnsavedChanges to false).
-                if (hasUnsavedChanges)
+                // if there are unsaved modifications, ask the user what to do
+                if (GraphHasChangedSinceLastSerialization())
                 {
                     int option = EditorUtility.DisplayDialogComplex(
                         "Shader Graph Has Been Modified",
-                        GetSaveChangesMessage(),
+                        "Do you want to save the changes you made in the Shader Graph?\n\n" +
+                        AssetDatabase.GUIDToAssetPath(selectedGuid) +
+                        "\n\nYour changes will be lost if you don't save them.",
                         "Save", "Cancel", "Discard Changes");
 
                     if (option == 0) // save
@@ -1278,19 +1211,6 @@ namespace UnityEditor.ShaderGraph.Drawing
                 }
             }
             return true;
-        }
-
-        private string GetSaveChangesMessage()
-        {
-            return "Do you want to save the changes you made in the Shader Graph?\n\n" +
-                AssetDatabase.GUIDToAssetPath(selectedGuid) +
-                "\n\nYour changes will be lost if you don't save them.";
-        }
-
-        public override void SaveChanges()
-        {
-            base.SaveChanges();
-            SaveAsset();
         }
 
         void OnGeometryChanged(GeometryChangedEvent evt)

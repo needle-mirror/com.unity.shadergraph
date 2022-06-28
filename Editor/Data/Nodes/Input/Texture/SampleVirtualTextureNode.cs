@@ -143,24 +143,6 @@ namespace UnityEditor.ShaderGraph
         }
 
         [SerializeField]
-        private bool m_EnableGlobalMipBias = true;
-        public bool enableGlobalMipBias
-        {
-            get
-            {
-                return m_EnableGlobalMipBias;
-            }
-            set
-            {
-                if (m_EnableGlobalMipBias == value)
-                    return;
-
-                m_EnableGlobalMipBias = value;
-                Dirty(ModificationScope.Graph);
-            }
-        }
-
-        [SerializeField]
         bool m_NoFeedback;          // aka !AutomaticStreaming
         public bool noFeedback
         {
@@ -180,7 +162,7 @@ namespace UnityEditor.ShaderGraph
         }
 
         public SampleVirtualTextureNode() : this(false, false)
-        {}
+        { }
 
         public SampleVirtualTextureNode(bool isLod = false, bool noResolve = false)
         {
@@ -318,7 +300,7 @@ namespace UnityEditor.ShaderGraph
             return GetVariableNameForNode() + "_fb";
         }
 
-        void AppendVtParameters(ShaderStringBuilder sb, string uvExpr, string lodExpr, string dxExpr, string dyExpr, AddressMode address, FilterMode filter, LodCalculation lod, UvSpace space, QualityMode quality, bool enableGlobalMipBias)
+        void AppendVtParameters(ShaderStringBuilder sb, string uvExpr, string lodExpr, string dxExpr, string dyExpr, AddressMode address, FilterMode filter, LodCalculation lod, UvSpace space, QualityMode quality)
         {
             sb.AppendLine("VtInputParameters vtParams;");
             sb.AppendLine("vtParams.uv = " + uvExpr + ";");
@@ -330,7 +312,7 @@ namespace UnityEditor.ShaderGraph
             sb.AppendLine("vtParams.levelMode = " + lod + ";");
             sb.AppendLine("vtParams.uvMode = " + space + ";");
             sb.AppendLine("vtParams.sampleQuality = " + quality + ";");
-            sb.AppendLine("vtParams.enableGlobalMipBias = " + (enableGlobalMipBias ? "1" : "0") + ";");
+
             sb.AppendLine("#if defined(SHADER_STAGE_RAY_TRACING)");
             sb.AppendLine("if (vtParams.levelMode == VtLevel_Automatic || vtParams.levelMode == VtLevel_Bias)");
             using (sb.BlockScope())
@@ -343,7 +325,7 @@ namespace UnityEditor.ShaderGraph
 
         void AppendVtSample(ShaderStringBuilder sb, string propertiesName, string vtInputVariable, string infoVariable, int layerIndex, string outputVariableName)
         {
-            sb.TryAppendIndentation();
+            sb.AppendIndentation();
             sb.Append(outputVariableName); sb.Append(" = ");
             sb.Append("SampleVTLayerWithTextureType(");
             sb.Append(propertiesName);          sb.Append(", ");
@@ -393,7 +375,7 @@ namespace UnityEditor.ShaderGraph
                 string dyExpr = "0.0f";
 
                 // function header
-                s.TryAppendIndentation();
+                s.AppendIndentation();
                 s.Append("float4 ");
                 s.Append(functionName);
                 s.Append("(float2 uv");
@@ -434,8 +416,7 @@ namespace UnityEditor.ShaderGraph
                         FilterMode.VtFilter_Anisotropic,
                         m_LodCalculation,
                         UvSpace.VtUvSpace_Regular,
-                        m_SampleQuality,
-                        m_EnableGlobalMipBias);
+                        m_SampleQuality);
 
                     s.AppendLine("StackInfo info = PrepareVT(vtProperty.vtProperty, vtParams);");
 
@@ -475,7 +456,7 @@ namespace UnityEditor.ShaderGraph
                     if (layerOutputVariables.Count > 0)
                     {
                         // assign feedback variable
-                        sb.TryAppendIndentation();
+                        sb.AppendIndentation();
                         if (!noFeedback)
                         {
                             sb.Append("float4 ");

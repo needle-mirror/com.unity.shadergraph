@@ -6,4 +6,3 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Unity.ShaderGraph.Editor.GraphicsTests")]
 [assembly: InternalsVisibleTo("Unity.RenderPipelines.HighDefinition.Editor")]
 [assembly: InternalsVisibleTo("Unity.VisualEffectGraph.Editor")]
-[assembly: InternalsVisibleTo("Unity.Industrial.Materials.AVRD.Editor")]

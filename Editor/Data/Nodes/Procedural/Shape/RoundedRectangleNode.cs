@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "Rounded Rectangle";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_RoundedRectangle", BindingFlags.Static | BindingFlags.NonPublic);
@@ -24,7 +25,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(4, Binding.None, ShaderStageCapability.Fragment)] out Vector1 Out)
         {
             return
-@"
+                @"
 {
     Radius = max(min(min(abs(Radius * 2), abs(Width)), abs(Height)), 1e-5);
     $precision2 uv = abs(UV * 2 - 1) - $precision2(Width, Height) + Radius;

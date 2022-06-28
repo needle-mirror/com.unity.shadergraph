@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "Ellipse";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_Ellipse", BindingFlags.Static | BindingFlags.NonPublic);
@@ -23,7 +24,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(4, Binding.None, ShaderStageCapability.Fragment)] out Vector1 Out)
         {
             return
-@"
+                @"
 {
     $precision d = length((UV * 2 - 1) / $precision2(Width, Height));
     Out = saturate((1 - d) / fwidth(d));

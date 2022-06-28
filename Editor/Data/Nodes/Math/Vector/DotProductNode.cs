@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "Dot Product";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_DotProduct", BindingFlags.Static | BindingFlags.NonPublic);
@@ -22,7 +23,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(2, Binding.None)] out Vector1 Out)
         {
             return
-@"
+                @"
 {
     Out = dot(A, B);
 }

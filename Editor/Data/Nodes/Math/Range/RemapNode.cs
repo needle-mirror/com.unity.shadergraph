@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "Remap";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_Remap", BindingFlags.Static | BindingFlags.NonPublic);
@@ -23,7 +24,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(3, Binding.None)] out DynamicDimensionVector Out)
         {
             return
-@"
+                @"
 {
     Out = OutMinMax.x + (In - InMinMax.x) * (OutMinMax.y - OutMinMax.x) / (InMinMax.y - InMinMax.x);
 }

@@ -10,6 +10,7 @@ namespace UnityEditor.ShaderGraph
             name = "Arctangent2";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_Arctangent2", BindingFlags.Static | BindingFlags.NonPublic);
@@ -21,7 +22,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(2, Binding.None)] out DynamicDimensionVector Out)
         {
             return
-@"
+                @"
 {
     Out = atan2(A, B);
 }

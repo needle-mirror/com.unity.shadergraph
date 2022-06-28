@@ -10,6 +10,7 @@ namespace UnityEditor.ShaderGraph
             name = "Posterize";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_Posterize", BindingFlags.Static | BindingFlags.NonPublic);
@@ -21,7 +22,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(2, Binding.None)] out DynamicDimensionVector Out)
         {
             return
-@"
+                @"
 {
     Out = floor(In / (1 / Steps)) * (1 / Steps);
 }

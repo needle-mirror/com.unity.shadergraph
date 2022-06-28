@@ -10,3 +10,4 @@ namespace UnityEditor.ShaderGraph
         public GroupData newGroup;
     }
 }
+

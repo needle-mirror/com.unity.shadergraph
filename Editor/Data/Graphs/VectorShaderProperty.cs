@@ -12,13 +12,13 @@ namespace UnityEditor.ShaderGraph.Internal
         internal override bool isRenamable => true;
         internal virtual int vectorDimension => 4;
 
-        internal override string GetHLSLVariableName(bool isSubgraphProperty, GenerationMode mode)
+        internal override string GetHLSLVariableName(bool isSubgraphProperty)
         {
             HLSLDeclaration decl = GetDefaultHLSLDeclaration();
             if (decl == HLSLDeclaration.HybridPerInstance)
                 return $"UNITY_ACCESS_HYBRID_INSTANCED_PROP({referenceName}, {concretePrecision.ToShaderString()}{vectorDimension})";
             else
-                return base.GetHLSLVariableName(isSubgraphProperty, mode);
+                return referenceName;
         }
 
         internal override string GetPropertyBlockString()
@@ -26,9 +26,9 @@ namespace UnityEditor.ShaderGraph.Internal
             return $"{hideTagString}{referenceName}(\"{displayName}\", Vector) = ({NodeUtils.FloatToShaderValueShaderLabSafe(value.x)}, {NodeUtils.FloatToShaderValueShaderLabSafe(value.y)}, {NodeUtils.FloatToShaderValueShaderLabSafe(value.z)}, {NodeUtils.FloatToShaderValueShaderLabSafe(value.w)})";
         }
 
-        internal override string GetPropertyAsArgumentString(string precisionString)
+        internal override string GetPropertyAsArgumentString()
         {
-            return $"{concreteShaderValueType.ToShaderString(precisionString)} {referenceName}";
+            return $"{concreteShaderValueType.ToShaderString(concretePrecision.ToShaderString())} {referenceName}";
         }
     }
 }

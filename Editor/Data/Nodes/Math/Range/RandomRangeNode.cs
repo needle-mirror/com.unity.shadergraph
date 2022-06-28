@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "Random Range";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_RandomRange", BindingFlags.Static | BindingFlags.NonPublic);
@@ -23,7 +24,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(3, Binding.None)] out Vector1 Out)
         {
             return
-@"
+                @"
 {
      $precision randomno =  frac(sin(dot(Seed, $precision2(12.9898, 78.233)))*43758.5453);
      Out = lerp(Min, Max, randomno);

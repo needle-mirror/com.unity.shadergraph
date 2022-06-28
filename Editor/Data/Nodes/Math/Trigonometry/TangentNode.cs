@@ -10,6 +10,7 @@ namespace UnityEditor.ShaderGraph
             name = "Tangent";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_Tangent", BindingFlags.Static | BindingFlags.NonPublic);
@@ -20,7 +21,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(1, Binding.None)] out DynamicDimensionVector Out)
         {
             return
-@"
+                @"
 {
     Out = tan(In);
 }

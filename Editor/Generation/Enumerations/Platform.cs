@@ -24,7 +24,7 @@ namespace UnityEditor.ShaderGraph
     {
         public static string ToShaderString(this Platform platform)
         {
-            switch (platform)
+            switch(platform)
             {
                 case Platform.D3D11:
                     return "d3d11";
@@ -62,12 +62,6 @@ namespace UnityEditor.ShaderGraph
         internal static Platform[] GetHighEndPlatformArray()
         {
             return new Platform[] { Platform.D3D11, Platform.Playstation, Platform.XboxOne, Platform.GameCoreXboxSeries, Platform.Vulkan, Platform.Metal, Platform.Switch };
-        }
-
-        // Return platform list not compatible with DXC (The list use by HDRP)
-        internal static Platform[] GetNeverUseDXCPlatformArray()
-        {
-            return new Platform[] { Platform.Metal };
         }
     }
 }

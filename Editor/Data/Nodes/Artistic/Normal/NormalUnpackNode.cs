@@ -13,6 +13,7 @@ namespace UnityEditor.ShaderGraph
             name = "Normal Unpack";
         }
 
+
         [SerializeField]
         private NormalMapSpace m_NormalMapSpace = NormalMapSpace.Tangent;
 
@@ -42,7 +43,7 @@ namespace UnityEditor.ShaderGraph
             Out = Vector3.up;
 
             return
-@"
+            @"
             {
                 Out = UnpackNormal(In);
             }
@@ -56,7 +57,7 @@ namespace UnityEditor.ShaderGraph
             Out = Vector3.up;
 
             return
-@"
+            @"
             {
                 Out = UnpackNormalRGB(In);
             }

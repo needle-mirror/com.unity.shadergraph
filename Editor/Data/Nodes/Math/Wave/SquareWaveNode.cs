@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -10,6 +10,7 @@ namespace UnityEditor.ShaderGraph
             name = "Square Wave";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("SquareWave", BindingFlags.Static | BindingFlags.NonPublic);
@@ -20,7 +21,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(1, Binding.None)] out DynamicDimensionVector Out)
         {
             return
-@"
+                @"
 {
     Out = 1.0 - 2.0 * round(frac(In));
 }

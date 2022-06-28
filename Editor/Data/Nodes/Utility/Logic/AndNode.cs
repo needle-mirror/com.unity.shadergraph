@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "And";
         }
 
+
         public override bool hasPreview
         {
             get { return false; }
@@ -27,7 +28,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(2, Binding.None)] out Boolean Out)
         {
             return
-@"
+                @"
 {
     Out = A && B;
 }

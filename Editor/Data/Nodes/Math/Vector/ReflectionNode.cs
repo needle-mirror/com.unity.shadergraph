@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "Reflection";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_Reflection", BindingFlags.Static | BindingFlags.NonPublic);

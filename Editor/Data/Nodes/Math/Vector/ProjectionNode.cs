@@ -10,6 +10,7 @@ namespace UnityEditor.ShaderGraph
             name = "Projection";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_Projection", BindingFlags.Static | BindingFlags.NonPublic);
@@ -21,7 +22,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(2, Binding.None)] out DynamicDimensionVector Out)
         {
             return
-@"
+                @"
 {
     Out = B * dot(A, B) / dot(B, B);
 }";

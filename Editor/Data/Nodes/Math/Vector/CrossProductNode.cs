@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "Cross Product";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_CrossProduct", BindingFlags.Static | BindingFlags.NonPublic);
@@ -23,7 +24,7 @@ namespace UnityEditor.ShaderGraph
         {
             Out = Vector3.zero;
             return
-@"
+                @"
 {
     Out = cross(A, B);
 }

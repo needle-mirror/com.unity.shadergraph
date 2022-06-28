@@ -8,30 +8,27 @@ namespace UnityEditor.ShaderGraph
         public ShaderStage shaderStage { get; }
         public bool isHidden { get; }
         public bool isUnknown { get; }
-        public bool isCustom { get; }
 
         internal string path { get; set; }
 
-        public BlockFieldDescriptor(string tag, string referenceName, string define, IControl control, ShaderStage shaderStage, bool isHidden = false, bool isUnknown = false, bool isCustom = false)
-            : base(tag, referenceName, define)
+        public BlockFieldDescriptor(string tag, string referenceName, string define, IControl control, ShaderStage shaderStage, bool isHidden = false, bool isUnknown = false)
+            : base (tag, referenceName, define)
         {
             this.displayName = referenceName;
             this.control = control;
             this.shaderStage = shaderStage;
             this.isHidden = isHidden;
             this.isUnknown = isUnknown;
-            this.isCustom = isCustom;
         }
 
-        public BlockFieldDescriptor(string tag, string referenceName, string displayName, string define, IControl control, ShaderStage shaderStage, bool isHidden = false, bool isUnknown = false, bool isCustom = false)
-            : base(tag, referenceName, define)
+        public BlockFieldDescriptor(string tag, string referenceName, string displayName, string define, IControl control, ShaderStage shaderStage, bool isHidden = false, bool isUnknown = false)
+            : base (tag, referenceName, define)
         {
             this.displayName = displayName;
             this.control = control;
             this.shaderStage = shaderStage;
             this.isHidden = isHidden;
             this.isUnknown = isUnknown;
-            this.isCustom = isCustom;
         }
     }
 
@@ -42,13 +39,13 @@ namespace UnityEditor.ShaderGraph
         public Func<MaterialSlot> createSlot;
 
         public CustomSlotBlockFieldDescriptor(string tag, string referenceName, string define, Func<MaterialSlot> createSlot)
-            : base(tag, referenceName, define, null, ShaderStage.Fragment)
+            : base (tag, referenceName, define, null, ShaderStage.Fragment)
         {
             this.createSlot = createSlot;
         }
 
         public CustomSlotBlockFieldDescriptor(string tag, string referenceName, string displayName, string define, Func<MaterialSlot> createSlot)
-            : base(tag, referenceName, displayName, define, null, ShaderStage.Fragment)
+            : base (tag, referenceName, displayName, define, null, ShaderStage.Fragment)
         {
             this.createSlot = createSlot;
         }

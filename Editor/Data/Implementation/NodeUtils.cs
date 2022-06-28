@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using UnityEditor.ShaderGraph;
 using UnityEngine;
-using UnityEngine.Pool;
 using UnityEngine.Rendering.ShaderGraph;
 
 namespace UnityEditor.Graphing
@@ -93,7 +92,7 @@ namespace UnityEditor.Graphing
                 // If this is a redirect node we continue to look for the top one
                 if (inputNode is RedirectNodeData redirectNode)
                 {
-                    return DepthFirstCollectRedirectNodeFromNode(redirectNode);
+                    return DepthFirstCollectRedirectNodeFromNode( redirectNode );
                 }
                 return outputSlotRef;
             }
@@ -116,7 +115,7 @@ namespace UnityEditor.Graphing
 
             // If this node is a keyword node and we have an active keyword permutation
             // The only valid port id is the port that corresponds to that keywords value in the active permutation
-            if (node is KeywordNode keywordNode && keywordPermutation != null)
+            if(node is KeywordNode keywordNode && keywordPermutation != null)
             {
                 var valueInPermutation = keywordPermutation.Where(x => x.Key == keywordNode.keyword).FirstOrDefault();
                 ids = new int[] { keywordNode.GetSlotIdForPermutation(valueInPermutation) };
@@ -140,7 +139,7 @@ namespace UnityEditor.Graphing
                 nodeList.Add(node);
         }
 
-        internal static List<AbstractMaterialNode> GetParentNodes(AbstractMaterialNode node)
+        private static List<AbstractMaterialNode> GetParentNodes(AbstractMaterialNode node)
         {
             List<AbstractMaterialNode> nodeList = new List<AbstractMaterialNode>();
             var ids = node.GetInputSlots<MaterialSlot>().Select(x => x.id);
@@ -174,25 +173,27 @@ namespace UnityEditor.Graphing
             }
 
 
+
             List<AbstractMaterialNode> parentNodes = GetParentNodes(node);
             //at this point we know we are not explicitly set to a state,
             //so there is no reason to be inactive
-            if (parentNodes.Count == 0)
+            if(parentNodes.Count == 0)
             {
                 return true;
             }
 
             bool output = false;
-            foreach (var parent in parentNodes)
+            foreach(var parent in parentNodes)
             {
                 output |= ActiveLeafExists(parent);
-                if (output)
+                if(output)
                 {
                     break;
                 }
             }
             return output;
         }
+
 
         private static List<AbstractMaterialNode> GetChildNodes(AbstractMaterialNode node)
         {
@@ -243,6 +244,7 @@ namespace UnityEditor.Graphing
                 }
             }
             return output;
+
         }
 
         private static void ActiveTreeExists(AbstractMaterialNode node, out bool activeLeaf, out bool activeRoot, out bool activeTree)
@@ -267,17 +269,18 @@ namespace UnityEditor.Graphing
         public static void ReevaluateActivityOfNodeList(IEnumerable<AbstractMaterialNode> nodes, PooledHashSet<AbstractMaterialNode> changedNodes = null)
         {
             bool getChangedNodes = changedNodes != null;
-            foreach (AbstractMaterialNode n in nodes)
+            foreach(AbstractMaterialNode n in nodes)
             {
                 if (n.activeState != AbstractMaterialNode.ActiveState.Implicit)
                     continue;
                 ActiveTreeExists(n, out _, out _, out bool at);
-                if (n.isActive != at && getChangedNodes)
+                if(n.isActive != at && getChangedNodes)
                 {
                     changedNodes.Add(n);
                 }
                 n.SetActive(at, false);
             }
+
         }
 
         //Go to the leaves of the node, then get all trees with those leaves
@@ -285,15 +288,15 @@ namespace UnityEditor.Graphing
         {
             List<AbstractMaterialNode> leaves = GetLeaves(node);
             List<AbstractMaterialNode> forrest = new List<AbstractMaterialNode>();
-            foreach (var leaf in leaves)
+            foreach(var leaf in leaves)
             {
-                if (!forrest.Contains(leaf))
+                if(!forrest.Contains(leaf))
                 {
                     forrest.Add(leaf);
                 }
-                foreach (var child in GetChildNodesRecursive(leaf))
+                foreach(var child in GetChildNodesRecursive(leaf))
                 {
-                    if (!forrest.Contains(child))
+                    if(!forrest.Contains(child))
                     {
                         forrest.Add(child);
                     }
@@ -306,15 +309,15 @@ namespace UnityEditor.Graphing
         {
             List<AbstractMaterialNode> output = new List<AbstractMaterialNode>() { node };
             List<AbstractMaterialNode> children = GetChildNodes(node);
-            foreach (var child in children)
+            foreach(var child in children)
             {
-                if (!output.Contains(child))
+                if(!output.Contains(child))
                 {
                     output.Add(child);
                 }
-                foreach (var descendent in GetChildNodesRecursive(child))
+                foreach(var descendent in GetChildNodesRecursive(child))
                 {
-                    if (!output.Contains(descendent))
+                    if(!output.Contains(descendent))
                     {
                         output.Add(descendent);
                     }
@@ -327,17 +330,17 @@ namespace UnityEditor.Graphing
         {
             List<AbstractMaterialNode> parents = GetParentNodes(node);
             List<AbstractMaterialNode> output = new List<AbstractMaterialNode>();
-            if (parents.Count == 0)
+            if(parents.Count == 0)
             {
                 output.Add(node);
             }
             else
             {
-                foreach (var parent in parents)
+                foreach(var parent in parents)
                 {
-                    foreach (var leaf in GetLeaves(parent))
+                    foreach(var leaf in GetLeaves(parent))
                     {
-                        if (!output.Contains(leaf))
+                        if(!output.Contains(leaf))
                         {
                             output.Add(leaf);
                         }
@@ -351,7 +354,7 @@ namespace UnityEditor.Graphing
         {
             // no where to start
             if (node == null)
-                return;
+                return;            
 
             // Recursively traverse downstream from the original node
             // Traverse down each edge and continue on any connected downstream nodes
@@ -372,7 +375,7 @@ namespace UnityEditor.Graphing
             }
 
             // No more nodes downstream from here
-            if (!hasDownstream)
+            if(!hasDownstream)
                 nodeList.Add(node);
         }
 
@@ -397,8 +400,9 @@ namespace UnityEditor.Graphing
                 return;
             }
 
-            using (ListPool<MaterialSlot>.Get(out var slots))
+            using (var slotsHandle = ListPool<MaterialSlot>.GetDisposable())
             {
+                var slots = slotsHandle.value;
                 node.GetInputSlots(slots);
                 foreach (var slot in slots)
                 {
@@ -466,9 +470,9 @@ namespace UnityEditor.Graphing
                 {
                     var ownerSlots = Enumerable.Empty<MaterialSlot>();
                     if (goingBackwards && slot.isOutputSlot)
-                        ownerSlots = slot.owner.GetInputSlots<MaterialSlot>(slot);
+                        ownerSlots = slot.owner.GetInputSlots<MaterialSlot>();
                     else if (!goingBackwards && slot.isInputSlot)
-                        ownerSlots = slot.owner.GetOutputSlots<MaterialSlot>(slot);
+                        ownerSlots = slot.owner.GetOutputSlots<MaterialSlot>();
                     foreach (var ownerSlot in ownerSlots)
                         s_SlotStack.Push(ownerSlot);
                 }
@@ -482,16 +486,12 @@ namespace UnityEditor.Graphing
             var graph = initialSlot.owner.owner;
             s_SlotStack.Clear();
             s_SlotStack.Push(initialSlot);
-            ShaderStageCapability capabilities = ShaderStageCapability.All;
             while (s_SlotStack.Any())
             {
                 var slot = s_SlotStack.Pop();
-
-                // Clear any stages from the total capabilities that this slot doesn't support (e.g. if this is vertex, clear pixel)
-                capabilities &= slot.stageCapability;
-                // Can early out if we know nothing is compatible, otherwise we have to keep checking everything we can reach.
-                if (capabilities == ShaderStageCapability.None)
-                    return capabilities;
+                ShaderStage stage;
+                if (slot.stageCapability.TryGetShaderStage(out stage))
+                    return slot.stageCapability;
 
                 if (goingBackwards && slot.isInputSlot)
                 {
@@ -513,15 +513,15 @@ namespace UnityEditor.Graphing
                 {
                     var ownerSlots = Enumerable.Empty<MaterialSlot>();
                     if (goingBackwards && slot.isOutputSlot)
-                        ownerSlots = slot.owner.GetInputSlots<MaterialSlot>(slot);
+                        ownerSlots = slot.owner.GetInputSlots<MaterialSlot>();
                     else if (!goingBackwards && slot.isInputSlot)
-                        ownerSlots = slot.owner.GetOutputSlots<MaterialSlot>(slot);
+                        ownerSlots = slot.owner.GetOutputSlots<MaterialSlot>();
                     foreach (var ownerSlot in ownerSlots)
                         s_SlotStack.Push(ownerSlot);
                 }
             }
 
-            return capabilities;
+            return ShaderStageCapability.All;
         }
 
         public static string GetSlotDimension(ConcreteSlotValueType slotValue)
@@ -542,8 +542,6 @@ namespace UnityEditor.Graphing
                     return "3x3";
                 case ConcreteSlotValueType.Matrix4:
                     return "4x4";
-                case ConcreteSlotValueType.PropertyConnectionState:
-                    return String.Empty;
                 default:
                     return "Error";
             }
@@ -585,120 +583,6 @@ namespace UnityEditor.Graphing
             "2x1", "2x2", "2x3", "2x4",
             "3x1", "3x2", "3x3", "3x4",
             "4x1", "4x2", "4x3", "4x4"
-        };
-
-        static HashSet<string> m_ShaderLabKeywords = new HashSet<string>()
-        {
-            // these should all be lowercase, as shaderlab keywords are case insensitive
-            "properties",
-            "range",
-            "bind",
-            "bindchannels",
-            "tags",
-            "lod",
-            "shader",
-            "subshader",
-            "category",
-            "fallback",
-            "dependency",
-            "customeditor",
-            "rect",
-            "any",
-            "float",
-            "color",
-            "int",
-            "integer",
-            "vector",
-            "matrix",
-            "2d",
-            "cube",
-            "3d",
-            "2darray",
-            "cubearray",
-            "name",
-            "settexture",
-            "true",
-            "false",
-            "on",
-            "off",
-            "separatespecular",
-            "offset",
-            "zwrite",
-            "zclip",
-            "conservative",
-            "ztest",
-            "alphatest",
-            "fog",
-            "stencil",
-            "colormask",
-            "alphatomask",
-            "cull",
-            "front",
-            "material",
-            "ambient",
-            "diffuse",
-            "specular",
-            "emission",
-            "shininess",
-            "blend",
-            "blendop",
-            "colormaterial",
-            "lighting",
-            "pass",
-            "grabpass",
-            "usepass",
-            "gpuprogramid",
-            "add",
-            "sub",
-            "revsub",
-            "min",
-            "max",
-            "logicalclear",
-            "logicalset",
-            "logicalcopy",
-            "logicalcopyinverted",
-            "logicalnoop",
-            "logicalinvert",
-            "logicaland",
-            "logicalnand",
-            "logicalor",
-            "logicalnor",
-            "logicalxor",
-            "logicalequiv",
-            "logicalandreverse",
-            "logicalandinverted",
-            "logicalorreverse",
-            "logicalorinverted",
-            "multiply",
-            "screen",
-            "overlay",
-            "darken",
-            "lighten",
-            "colordodge",
-            "colorburn",
-            "hardlight",
-            "softlight",
-            "difference",
-            "exclusion",
-            "hslhue",
-            "hslsaturation",
-            "hslcolor",
-            "hslluminosity",
-            "zero",
-            "one",
-            "dstcolor",
-            "srccolor",
-            "oneminusdstcolor",
-            "srcalpha",
-            "oneminussrccolor",
-            "dstalpha",
-            "oneminusdstalpha",
-            "srcalphasaturate",
-            "oneminussrcalpha",
-            "constantcolor",
-            "oneminusconstantcolor",
-            "constantalpha",
-            "oneminusconstantalpha",
         };
 
         static HashSet<string> m_HLSLKeywords = new HashSet<string>()
@@ -850,16 +734,6 @@ namespace UnityEditor.Graphing
             "while"
         };
 
-        static HashSet<string> m_ShaderGraphKeywords = new HashSet<string>()
-        {
-            "Gradient",
-            "UnitySamplerState",
-            "UnityTexture2D",
-            "UnityTexture2DArray",
-            "UnityTexture3D",
-            "UnityTextureCube"
-        };
-
         static bool m_HLSLKeywordDictionaryBuilt = false;
 
         public static bool IsHLSLKeyword(string id)
@@ -878,24 +752,10 @@ namespace UnityEditor.Graphing
             return isHLSLKeyword;
         }
 
-        public static bool IsShaderLabKeyWord(string id)
-        {
-            bool isShaderLabKeyword = m_ShaderLabKeywords.Contains(id.ToLower());
-            return isShaderLabKeyword;
-        }
 
-        public static bool IsShaderGraphKeyWord(string id)
-        {
-            bool isShaderGraphKeyword = m_ShaderGraphKeywords.Contains(id);
-            return isShaderGraphKeyword;
-        }
-
-        public static string ConvertToValidHLSLIdentifier(string originalId, Func<string, bool> isDisallowedIdentifier = null)
+        public static string ConvertToValidHLSLIdentifier(string originalId)
         {
             // Converts "  1   var  * q-30 ( 0 ) (1)   " to "_1_var_q_30_0_1"
-            if (originalId == null)
-                originalId = "";
-
             StringBuilder hlslId = new StringBuilder(originalId.Length);
             bool lastInvalid = false;
             for (int i = 0; i < originalId.Length; i++)
@@ -941,10 +801,6 @@ namespace UnityEditor.Graphing
             while (IsHLSLKeyword(result))
                 result = "_" + result;
 
-            if (isDisallowedIdentifier != null)
-                while (isDisallowedIdentifier(result))
-                    result = "_" + result;
-
             return result;
         }
 
@@ -965,7 +821,7 @@ namespace UnityEditor.Graphing
         public static bool ValidateSlotName(string inName, out string errorMessage)
         {
             //check for invalid characters between display safe and hlsl safe name
-            if (GetDisplaySafeName(inName) != GetHLSLSafeName(inName) && GetDisplaySafeName(inName) != ConvertToValidHLSLIdentifier(inName))
+            if (GetDisplaySafeName(inName) != GetHLSLSafeName(inName))
             {
                 errorMessage = "Slot name(s) found invalid character(s). Valid characters: A-Z, a-z, 0-9, _ ( ) ";
                 return true;

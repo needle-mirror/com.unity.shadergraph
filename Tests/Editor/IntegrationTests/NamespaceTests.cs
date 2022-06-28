@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph.UnitTests
     [TestFixture]
     internal class NamespaceTests
     {
+
         [Test]
         public void NoDanglingNamespaces()
         {
@@ -23,11 +24,11 @@ namespace UnityEditor.ShaderGraph.UnitTests
             var invalidNames = new List<string>();
             foreach (var name in namespaces)
             {
-                if (name.Contains("ShaderGraph"))
+                if(name.Contains("ShaderGraph"))
                     continue;
                 if (name.Contains("UnityEditor"))
                     continue;
-                if (name.Contains("UnityEngine"))
+                if(name.Contains("UnityEngine"))
                     continue;
 
                 invalidNames.Add(name);

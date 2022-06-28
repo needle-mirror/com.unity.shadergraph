@@ -10,6 +10,7 @@ namespace UnityEditor.ShaderGraph
             name = "Subtract";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_Subtract", BindingFlags.Static | BindingFlags.NonPublic);
@@ -21,7 +22,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(2, Binding.None)] out DynamicDimensionVector Out)
         {
             return
-@"
+                @"
 {
     Out = A - B;
 }

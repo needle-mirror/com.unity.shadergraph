@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "Matrix Transpose";
         }
 
+
         public override bool hasPreview
         {
             get { return false; }
@@ -26,7 +27,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(1, Binding.None)] out DynamicDimensionMatrix Out)
         {
             return
-@"
+                @"
 {
     Out = transpose(In);
 }

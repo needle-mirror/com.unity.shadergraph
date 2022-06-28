@@ -1,85 +1,61 @@
-using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace UnityEditor.ShaderGraph
 {
     [GenerationAPI]
-    [Serializable]
-    internal class IncludeCollection : IEnumerable<IncludeDescriptor>
+    internal class IncludeCollection : IEnumerable<IncludeCollection.Item>
     {
-        [SerializeField]
-        List<IncludeDescriptor> includes;
+        public class Item : IConditional, IShaderString
+        {
+            public IncludeDescriptor descriptor { get; }
+            public FieldCondition[] fieldConditions { get; }
+            public string value => $"#include \"{descriptor.value}\"";
+
+            public Item(IncludeDescriptor descriptor, FieldCondition[] fieldConditions)
+            {
+                this.descriptor = descriptor;
+                this.fieldConditions = fieldConditions;
+            }
+        }
+
+        readonly List<Item> m_Items;
 
         public IncludeCollection()
         {
-            includes = new List<IncludeDescriptor>();
+            m_Items = new List<Item>();
         }
 
         public IncludeCollection Add(IncludeCollection includes)
         {
-            if (includes != null)
+            foreach(IncludeCollection.Item item in includes)
             {
-                foreach (var include in includes)
-                {
-                    AddInternal(include.guid, include.path, include.location, include.fieldConditions);
-                }
+                m_Items.Add(item);
             }
             return this;
         }
 
-        public IncludeCollection Add(string includePath, IncludeLocation location)
+        public IncludeCollection Add(string include, IncludeLocation location)
         {
-            var guid = AssetDatabase.AssetPathToGUID(includePath);
-            return AddInternal(guid, includePath, location);
-        }
-
-        public IncludeCollection Add(string includePath, IncludeLocation location, FieldCondition fieldCondition)
-        {
-            var guid = AssetDatabase.AssetPathToGUID(includePath);
-            return AddInternal(guid, includePath, location, new FieldCondition[] { fieldCondition });
-        }
-
-        public IncludeCollection Add(string includePath, IncludeLocation location, FieldCondition[] fieldConditions)
-        {
-            var guid = AssetDatabase.AssetPathToGUID(includePath);
-            return AddInternal(guid, includePath, location, fieldConditions);
-        }
-
-        public IncludeCollection AddInternal(string includeGUID, string includePath, IncludeLocation location, FieldCondition[] fieldConditions = null)
-        {
-            if (string.IsNullOrEmpty(includeGUID))
-            {
-                // either the file doesn't exist, or this is a placeholder
-                // de-duplicate by path
-                int existing = includes.FindIndex(i => i.path == includePath);
-                if (existing < 0)
-                    includes.Add(new IncludeDescriptor(null, includePath, location, fieldConditions));
-                return this;
-            }
-            else
-            {
-                // de-duplicate by GUID
-                int existing = includes.FindIndex(i => i.guid == includeGUID);
-                if (existing < 0)
-                {
-                    // no duplicates, just add it
-                    includes.Add(new IncludeDescriptor(includeGUID, includePath, location, fieldConditions));
-                }
-                else
-                {
-                    // duplicate file -- we could double check they are the same...
-                    // they might have different field conditions that require merging, for example.
-                    // But for now we'll just assume they are the same and drop the new one
-                }
-            }
+            m_Items.Add(new Item(new IncludeDescriptor() { value = include, location = location }, null));
             return this;
         }
 
-        public IEnumerator<IncludeDescriptor> GetEnumerator()
+        public IncludeCollection Add(string include, IncludeLocation location, FieldCondition fieldCondition)
         {
-            return includes.GetEnumerator();
+            m_Items.Add(new Item(new IncludeDescriptor() { value = include, location = location }, new FieldCondition[]{ fieldCondition }));
+            return this;
+        }
+
+        public IncludeCollection Add(string include, IncludeLocation location, FieldCondition[] fieldConditions)
+        {
+            m_Items.Add(new Item(new IncludeDescriptor() { value = include, location = location }, fieldConditions));
+            return this;
+        }
+
+        public IEnumerator<Item> GetEnumerator()
+        {
+            return m_Items.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

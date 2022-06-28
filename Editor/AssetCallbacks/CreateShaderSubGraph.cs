@@ -1,12 +1,11 @@
 using System.IO;
 using UnityEditor.ProjectWindowCallback;
-using UnityEngine.Rendering;
 
 namespace UnityEditor.ShaderGraph
 {
     class CreateShaderSubGraph : EndNameEditAction
     {
-        [MenuItem("Assets/Create/Shader Graph/Sub Graph", priority = CoreUtils.Sections.section1 + CoreUtils.Priorities.assetsCreateShaderMenuPriority + 1)]
+        [MenuItem("Assets/Create/Shader/Sub Graph", false, 208)]
         public static void CreateMaterialSubGraph()
         {
             ProjectWindowUtil.StartNameEditingIfProjectWindowExists(0, CreateInstance<CreateShaderSubGraph>(),

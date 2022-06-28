@@ -36,12 +36,12 @@ namespace UnityEditor.ShaderGraph
             action(new HLSLProperty(HLSLType._SamplerState, propertyReferenceName, HLSLDeclaration.Global));
         }
 
-        internal override string GetPropertyAsArgumentString(string precisionString)
+        internal override string GetPropertyAsArgumentString()
         {
             return $"UnitySamplerState {referenceName}";
         }
 
-        internal override string GetHLSLVariableName(bool isSubgraphProperty, GenerationMode mode)
+        internal override string GetHLSLVariableName(bool isSubgraphProperty)
         {
             if (isSubgraphProperty)
                 return referenceName;
@@ -68,7 +68,10 @@ namespace UnityEditor.ShaderGraph
             return new SamplerStateShaderProperty()
             {
                 displayName = displayName,
+                hidden = hidden,
+                overrideReferenceName = overrideReferenceName,
                 value = value,
+                precision = precision,
             };
         }
 
@@ -83,7 +86,7 @@ namespace UnityEditor.ShaderGraph
                 // however we must clear out the old reference name first (as it was always hard-coded)
                 // this will fallback to the default ref name
                 overrideReferenceName = null;
-                var unused = referenceName;
+                GetDefaultReferenceName();
                 ChangeVersion(1);
             }
         }

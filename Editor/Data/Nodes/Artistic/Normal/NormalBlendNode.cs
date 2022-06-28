@@ -20,6 +20,7 @@ namespace UnityEditor.ShaderGraph
             name = "Normal Blend";
         }
 
+
         [SerializeField]
         private NormalBlendMode m_BlendMode = NormalBlendMode.Default;
 
@@ -69,11 +70,11 @@ namespace UnityEditor.ShaderGraph
         {
             Out = Vector3.one;
             return
-@"
+                @"
 {
-    $precision3 t = A.xyz + $precision3(0.0, 0.0, 1.0);
-    $precision3 u = B.xyz * $precision3(-1.0, -1.0, 1.0);
-    Out = (t / t.z) * dot(t, u) - u;
+	$precision3 t = A.xyz + $precision3(0.0, 0.0, 1.0);
+	$precision3 u = B.xyz * $precision3(-1.0, -1.0, 1.0);
+	Out = (t / t.z) * dot(t, u) - u;
 }
 ";
         }

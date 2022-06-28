@@ -16,6 +16,7 @@ namespace UnityEditor.ShaderGraph
             UpdateNodeAfterDeserialization();
         }
 
+
         const int InputSlotId = 0;
         const int OutputSlotId = 1;
         const string kInputSlotName = "In";
@@ -154,7 +155,7 @@ namespace UnityEditor.ShaderGraph
             //pass it to maskInput
             if (sgVersion < 1)
             {
-                LegacySwizzleChannelData.LegacySwizzleChannel(json, this);
+                LegacySwizzleChannelData.LegancySwizzleChannel(json, this);
                 ChangeVersion(1);
                 UpdateNodeAfterDeserialization();
             }
@@ -175,7 +176,7 @@ namespace UnityEditor.ShaderGraph
             public TextureChannel m_AlphaChannel;
 
 
-            public static void LegacySwizzleChannel(string json, SwizzleNode node)
+            public static void LegancySwizzleChannel(string json, SwizzleNode node)
             {
                 Dictionary<TextureChannel, string> s_ComponentList = new Dictionary<TextureChannel, string>
                 {

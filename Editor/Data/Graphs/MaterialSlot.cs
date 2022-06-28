@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEditor.Graphing;
 using UnityEditor.ShaderGraph.Internal;
 using UnityEditor.ShaderGraph.Serialization;
-using UnityEditor.ShaderGraph.Drawing.Slots;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.ShaderGraph
@@ -13,7 +13,7 @@ namespace UnityEditor.ShaderGraph
     [Serializable]
     abstract class MaterialSlot : JsonObject
     {
-        const string k_NotInit =  "Not Initialized";
+        const string k_NotInit =  "Not Initilaized";
 
         [SerializeField]
         int m_Id;
@@ -51,34 +51,6 @@ namespace UnityEditor.ShaderGraph
         {
             this.m_SlotType = slotType;
             this.shaderOutputName = shaderOutputName;
-        }
-
-        public bool IsConnectionTestable()
-        {
-            if (owner is SubGraphNode sgNode)
-            {
-                var property = sgNode.GetShaderProperty(id);
-                if (property != null)
-                {
-                    return property.isConnectionTestable;
-                }
-            }
-            else if (owner is PropertyNode propertyNode)
-            {
-                return propertyNode.property.isConnectionTestable;
-            }
-            return false;
-        }
-
-        public VisualElement InstantiateCustomControl()
-        {
-            if (!isConnected && IsConnectionTestable())
-            {
-                var sgNode = owner as SubGraphNode;
-                var property = sgNode.GetShaderProperty(id);
-                return new LabelSlotControlView(property.customSlotLabel);
-            }
-            return null;
         }
 
         public virtual VisualElement InstantiateControl()
@@ -120,8 +92,6 @@ namespace UnityEditor.ShaderGraph
                     return "(G)";
                 case ConcreteSlotValueType.VirtualTexture:
                     return "(VT)";
-                case ConcreteSlotValueType.PropertyConnectionState:
-                    return "(P)";
                 default:
                     return "(E)";
             }
@@ -190,8 +160,6 @@ namespace UnityEditor.ShaderGraph
                     return new DynamicValueMaterialSlot(slotId, displayName, shaderOutputName, slotType, new Matrix4x4(defaultValue, Vector4.zero, Vector4.zero, Vector4.zero), shaderStageCapability, hidden);
                 case SlotValueType.Boolean:
                     return new BooleanMaterialSlot(slotId, displayName, shaderOutputName, slotType, false, shaderStageCapability, hidden);
-                case SlotValueType.PropertyConnectionState:
-                    return new PropertyConnectionStateMaterialSlot(slotId, displayName, shaderOutputName, slotType, shaderStageCapability, hidden);
             }
 
             throw new ArgumentOutOfRangeException("type", type, null);
@@ -282,20 +250,15 @@ namespace UnityEditor.ShaderGraph
             return otherSlot != null
                 && otherSlot.owner != owner
                 && otherSlot.isInputSlot != isInputSlot
-                && !hidden
-                && !otherSlot.hidden
                 && ((isInputSlot
-                    ? SlotValueHelper.AreCompatible(valueType, otherSlot.concreteValueType, otherSlot.IsConnectionTestable())
-                    : SlotValueHelper.AreCompatible(otherSlot.valueType, concreteValueType, IsConnectionTestable())));
+                     ? SlotValueHelper.AreCompatible(valueType, otherSlot.concreteValueType)
+                     : SlotValueHelper.AreCompatible(otherSlot.valueType, concreteValueType)));
         }
 
         public bool IsCompatibleStageWith(MaterialSlot otherSlot)
         {
-            var startStage = otherSlot.stageCapability;
-            if (startStage == ShaderStageCapability.All || otherSlot.owner is SubGraphNode)
-                startStage = NodeUtils.GetEffectiveShaderStageCapability(otherSlot, true)
-                    & NodeUtils.GetEffectiveShaderStageCapability(otherSlot, false);
-            return startStage == ShaderStageCapability.All || stageCapability == ShaderStageCapability.All || stageCapability == startStage;
+            var candidateStage = otherSlot.stageCapability;
+            return stageCapability == ShaderStageCapability.All || candidateStage == stageCapability;
         }
 
         public string GetDefaultValue(GenerationMode generationMode, ConcretePrecision concretePrecision)
@@ -360,7 +323,7 @@ namespace UnityEditor.ShaderGraph
 
         // this tracks old CustomFunctionNode slots that are expecting the old bare resource inputs
         // rather than the new structure-based inputs
-        internal virtual bool bareResource { get { return false; } set {} }
+        internal virtual bool bareResource { get { return false; } set { } }
 
         public virtual void CopyDefaultValue(MaterialSlot other)
         {

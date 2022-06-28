@@ -36,6 +36,7 @@ namespace UnityEditor.ShaderGraph
             name = "Rotate";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             if (m_Unit == RotationUnit.Radians)
@@ -54,7 +55,7 @@ namespace UnityEditor.ShaderGraph
 
 
             return
-@"
+                @"
 {
     //rotation matrix
     UV -= Center;

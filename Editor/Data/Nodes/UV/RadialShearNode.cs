@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "Radial Shear";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_RadialShear", BindingFlags.Static | BindingFlags.NonPublic);
@@ -25,7 +26,7 @@ namespace UnityEditor.ShaderGraph
         {
             Out = Vector2.zero;
             return
-@"
+                @"
 {
     $precision2 delta = UV - Center;
     $precision delta2 = dot(delta.xy, delta.xy);

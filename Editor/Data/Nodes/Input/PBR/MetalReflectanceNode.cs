@@ -29,6 +29,7 @@ namespace UnityEditor.ShaderGraph
             UpdateNodeAfterDeserialization();
         }
 
+
         [SerializeField]
         private MetalMaterialType m_Material = MetalMaterialType.Iron;
 

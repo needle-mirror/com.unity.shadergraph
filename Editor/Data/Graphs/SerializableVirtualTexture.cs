@@ -59,3 +59,4 @@ namespace UnityEditor.ShaderGraph.Internal
         public bool procedural;
     }
 }
+

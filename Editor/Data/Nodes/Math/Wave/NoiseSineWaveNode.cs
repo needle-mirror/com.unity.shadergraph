@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Reflection;
 
 namespace UnityEditor.ShaderGraph
@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "Noise Sine Wave";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("NoiseSineWave", BindingFlags.Static | BindingFlags.NonPublic);
@@ -22,7 +23,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(2, Binding.None)] out DynamicDimensionVector Out)
         {
             return
-@"
+                @"
 {
     $precision sinIn = sin(In);
     $precision sinInOffset = sin(In + 1.0);

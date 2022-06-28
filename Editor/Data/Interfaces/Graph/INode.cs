@@ -31,24 +31,10 @@ namespace UnityEditor.Graphing
             return slots;
         }
 
-        public static IEnumerable<T> GetInputSlots<T>(this AbstractMaterialNode node, MaterialSlot startingSlot) where T : MaterialSlot
-        {
-            var slots = new List<T>();
-            node.GetInputSlots(startingSlot, slots);
-            return slots;
-        }
-
         public static IEnumerable<T> GetOutputSlots<T>(this AbstractMaterialNode node) where T : MaterialSlot
         {
             var slots = new List<T>();
             node.GetOutputSlots(slots);
-            return slots;
-        }
-
-        public static IEnumerable<T> GetOutputSlots<T>(this AbstractMaterialNode node, MaterialSlot startingSlot) where T : MaterialSlot
-        {
-            var slots = new List<T>();
-            node.GetOutputSlots(startingSlot, slots);
             return slots;
         }
     }

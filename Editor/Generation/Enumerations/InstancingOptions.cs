@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -15,7 +15,7 @@ namespace UnityEditor.ShaderGraph
     {
         public static string ToShaderString(this InstancingOptions options)
         {
-            switch (options)
+            switch(options)
             {
                 case InstancingOptions.RenderingLayer:
                     return "renderinglayer";

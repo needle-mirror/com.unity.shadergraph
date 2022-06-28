@@ -5,22 +5,28 @@ using UnityEditor.Graphing;
 using UnityEditor.Rendering;
 using UnityEditor.ShaderGraph.Drawing;
 using UnityEditor.ShaderGraph.Drawing.Controls;
+using UnityEditor.ShaderGraph.Drawing.Inspector;
 using UnityEditor.ShaderGraph.Internal;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEditor.ShaderGraph.Drawing.Inspector.PropertyDrawers;
-using ContextualMenuManipulator = UnityEngine.UIElements.ContextualMenuManipulator;
+using UnityEditor.ShaderGraph.Drawing.Views.Blackboard;
 
 namespace UnityEditor.ShaderGraph
 {
     sealed class PropertyNodeView : TokenNode, IShaderNodeView, IInspectable
     {
+        static Type s_ContextualMenuManipulator = TypeCache.GetTypesDerivedFrom<MouseManipulator>().FirstOrDefault(t => t.FullName == "UnityEngine.UIElements.ContextualMenuManipulator");
         static readonly Texture2D exposedIcon = Resources.Load<Texture2D>("GraphView/Nodes/BlackboardFieldExposed");
+
+        internal delegate void ChangeDisplayNameCallback(string newDisplayName);
 
         // When the properties are changed, this delegate is used to trigger an update in the view that represents those properties
         Action m_propertyViewUpdateTrigger;
 
-        Action m_ResetReferenceNameAction;
+        IManipulator m_ResetReferenceMenu;
+
+        ShaderInputPropertyDrawer.ChangeReferenceNameCallback m_resetReferenceNameTrigger;
 
         public PropertyNodeView(PropertyNode node, EdgeConnectorListener edgeConnectorListener)
             : base(null, ShaderPort.Create(node.GetOutputSlots<MaterialSlot>().First(), edgeConnectorListener))
@@ -31,7 +37,10 @@ namespace UnityEditor.ShaderGraph
             userData = node;
 
             // Getting the generatePropertyBlock property to see if it is exposed or not
-            UpdateIcon();
+            var graph = node.owner as GraphData;
+            var property = node.property;
+            var icon = (graph.isSubGraph || (property.isExposable && property.generatePropertyBlock)) ? exposedIcon : null;
+            this.icon = icon;
 
             // Setting the position of the node, otherwise it ends up in the center of the canvas
             SetPosition(new Rect(node.drawState.position.x, node.drawState.position.y, 0, 0));
@@ -49,14 +58,11 @@ namespace UnityEditor.ShaderGraph
             RegisterCallback<MouseEnterEvent>(OnMouseHover);
             RegisterCallback<MouseLeaveEvent>(OnMouseHover);
 
-            // add the right click context menu
-            IManipulator contextMenuManipulator = new ContextualMenuManipulator(AddContextMenuOptions);
-            this.AddManipulator(contextMenuManipulator);
+            UpdateReferenceNameResetMenu();
 
             // Set callback association for display name updates
-            property.displayNameUpdateTrigger += node.UpdateNodeDisplayName;
+            m_displayNameUpdateTrigger += node.UpdateNodeDisplayName;
         }
-
         public Node gvNode => this;
         public AbstractMaterialNode node { get; }
         public VisualElement colorElement => null;
@@ -65,161 +71,89 @@ namespace UnityEditor.ShaderGraph
         [Inspectable("ShaderInput", null)]
         AbstractShaderProperty property => (node as PropertyNode)?.property;
 
+        ChangeDisplayNameCallback m_displayNameUpdateTrigger;
+
         public object GetObjectToInspect()
         {
             return property;
         }
 
-        public void SupplyDataToPropertyDrawer(IPropertyDrawer propertyDrawer, Action inspectorUpdateDelegate)
+        public void SupplyDataToPropertyDrawer(IPropertyDrawer propertyDrawer, Action inspectorUpdateDelegate, Action<InspectorUpdateSource> scopedInspectorUpdateDelegate = null)
         {
-            if (propertyDrawer is ShaderInputPropertyDrawer shaderInputPropertyDrawer)
+            if(propertyDrawer is ShaderInputPropertyDrawer shaderInputPropertyDrawer)
             {
                 var propNode = node as PropertyNode;
                 var graph = node.owner as GraphData;
 
-                var shaderInputViewModel = new ShaderInputViewModel()
-                {
-                    model = property,
-                    parentView = null,
-                    isSubGraph = graph.isSubGraph,
-                    isInputExposed = property.isExposed,
-                    inputName = property.displayName,
-                    inputTypeName = property.GetPropertyTypeString(),
-                    requestModelChangeAction = this.RequestModelChange
-                };
-                shaderInputPropertyDrawer.GetViewModel(shaderInputViewModel, node.owner, this.MarkNodesAsDirty);
+                shaderInputPropertyDrawer.GetPropertyData(
+                    graph.isSubGraph,
+                    graph,
+                    this.ChangeExposedField,
+                    this.ChangeDisplayNameField,
+                    this.ChangeReferenceNameField,
+                    () => graph.ValidateGraph(),
+                    () => graph.OnKeywordChanged(),
+                    this.ChangePropertyValue,
+                    this.RegisterPropertyChangeUndo,
+                    this.MarkNodesAsDirty);
 
                 this.m_propertyViewUpdateTrigger = inspectorUpdateDelegate;
-                this.m_ResetReferenceNameAction = shaderInputPropertyDrawer.ResetReferenceName;
+                this.m_resetReferenceNameTrigger = shaderInputPropertyDrawer._resetReferenceNameCallback;
             }
-        }
 
-        void RequestModelChange(IGraphDataAction changeAction)
-        {
-            node.owner?.owner.graphDataStore.Dispatch(changeAction);
+            UpdateReferenceNameResetMenu();
         }
 
         void ChangeExposedField(bool newValue)
         {
             property.generatePropertyBlock = newValue;
-            UpdateIcon();
+            icon = property.generatePropertyBlock ? BlackboardProvider.exposedIcon : null;
         }
 
-        void ChangeDisplayName(string newValue)
+        void ChangeDisplayNameField(string newValue)
         {
-            property.displayName = newValue;
-        }
+            var graph = node.owner as GraphData;
 
-        internal static void AddMainColorMenuOptions(ContextualMenuPopulateEvent evt, ColorShaderProperty colorProp, GraphData graphData, Action inspectorUpdateAction)
-        {
-            if (!graphData.isSubGraph)
+            if(newValue != property.displayName)
             {
-                if (!colorProp.isMainColor)
-                {
-                    evt.menu.AppendAction(
-                        "Set as Main Color",
-                        e =>
-                        {
-                            ColorShaderProperty col = graphData.GetMainColor();
-                            if (col != null)
-                            {
-                                if (EditorUtility.DisplayDialog("Change Main Color Action", $"Are you sure you want to change the Main Color from {col.displayName} to {colorProp.displayName}?", "Yes", "Cancel"))
-                                {
-                                    graphData.owner.RegisterCompleteObjectUndo("Change Main Color");
-                                    col.isMainColor = false;
-                                    colorProp.isMainColor = true;
-                                    inspectorUpdateAction();
-                                }
-                                return;
-                            }
-
-                            graphData.owner.RegisterCompleteObjectUndo("Set Main Color");
-                            colorProp.isMainColor = true;
-                            inspectorUpdateAction();
-                        });
-                }
-                else
-                {
-                    evt.menu.AppendAction(
-                        "Clear Main Color",
-                        e =>
-                        {
-                            graphData.owner.RegisterCompleteObjectUndo("Clear Main Color");
-                            colorProp.isMainColor = false;
-                            inspectorUpdateAction();
-                        });
-                }
+                property.displayName = newValue;
+                graph.SanitizeGraphInputName(property);
+                m_displayNameUpdateTrigger?.Invoke(newValue);
+                MarkNodesAsDirty(true, ModificationScope.Node);
             }
         }
 
-        internal static void AddMainTextureMenuOptions(ContextualMenuPopulateEvent evt, Texture2DShaderProperty texProp, GraphData graphData, Action inspectorUpdateAction)
+        void ChangeReferenceNameField(string newValue)
         {
-            if (!graphData.isSubGraph)
-            {
-                if (!texProp.isMainTexture)
-                {
-                    evt.menu.AppendAction(
-                        "Set as Main Texture",
-                        e =>
-                        {
-                            Texture2DShaderProperty tex = graphData.GetMainTexture();
-                            // There's already a main texture, ask the user if they want to change and toggle the old one to not be main
-                            if (tex != null)
-                            {
-                                if (EditorUtility.DisplayDialog("Change Main Texture Action", $"Are you sure you want to change the Main Texture from {tex.displayName} to {texProp.displayName}?", "Yes", "Cancel"))
-                                {
-                                    graphData.owner.RegisterCompleteObjectUndo("Change Main Texture");
-                                    tex.isMainTexture = false;
-                                    texProp.isMainTexture = true;
-                                    inspectorUpdateAction();
-                                }
-                                return;
-                            }
+            var graph = node.owner as GraphData;
 
-                            graphData.owner.RegisterCompleteObjectUndo("Set Main Texture");
-                            texProp.isMainTexture = true;
-                            inspectorUpdateAction();
-                        });
-                }
-                else
-                {
-                    evt.menu.AppendAction(
-                        "Clear Main Texture",
-                        e =>
-                        {
-                            graphData.owner.RegisterCompleteObjectUndo("Clear Main Texture");
-                            texProp.isMainTexture = false;
-                            inspectorUpdateAction();
-                        });
-                }
+            if (newValue != property.referenceName)
+                graph.SanitizeGraphInputReferenceName(property, newValue);
+
+            UpdateReferenceNameResetMenu();
+        }
+        void UpdateReferenceNameResetMenu()
+        {
+            if (string.IsNullOrEmpty(property.overrideReferenceName))
+            {
+                this.RemoveManipulator(m_ResetReferenceMenu);
+                m_ResetReferenceMenu = null;
+            }
+            else
+            {
+                m_ResetReferenceMenu = (IManipulator)Activator.CreateInstance(s_ContextualMenuManipulator, (Action<ContextualMenuPopulateEvent>)BuildResetReferenceNameContextualMenu);
+                this.AddManipulator(m_ResetReferenceMenu);
             }
         }
 
-        void AddContextMenuOptions(ContextualMenuPopulateEvent evt)
+        void BuildResetReferenceNameContextualMenu(ContextualMenuPopulateEvent evt)
         {
-            // Checks if the reference name has been overridden and appends menu action to reset it, if so
-            if (property.isRenamable &&
-                !string.IsNullOrEmpty(property.overrideReferenceName))
+            evt.menu.AppendAction("Reset Reference", e =>
             {
-                evt.menu.AppendAction(
-                    "Reset Reference",
-                    e =>
-                    {
-                        m_ResetReferenceNameAction();
-                        DirtyNodes(ModificationScope.Graph);
-                    },
-                    DropdownMenuAction.AlwaysEnabled);
-            }
-
-            if (property is ColorShaderProperty colorProp)
-            {
-                AddMainColorMenuOptions(evt, colorProp, node.owner, m_propertyViewUpdateTrigger);
-            }
-
-            if (property is Texture2DShaderProperty texProp)
-            {
-                AddMainTextureMenuOptions(evt, texProp, node.owner, m_propertyViewUpdateTrigger);
-            }
+                property.overrideReferenceName = null;
+                m_resetReferenceNameTrigger(property.referenceName);
+                DirtyNodes(ModificationScope.Graph);
+            }, DropdownMenuAction.AlwaysEnabled);
         }
 
         void RegisterPropertyChangeUndo(string actionName)
@@ -231,61 +165,61 @@ namespace UnityEditor.ShaderGraph
         void MarkNodesAsDirty(bool triggerPropertyViewUpdate = false, ModificationScope modificationScope = ModificationScope.Node)
         {
             DirtyNodes(modificationScope);
-            if (triggerPropertyViewUpdate)
+            if(triggerPropertyViewUpdate)
                 this.m_propertyViewUpdateTrigger();
         }
 
         void ChangePropertyValue(object newValue)
         {
-            if (property == null)
+            if(property == null)
                 return;
 
-            switch (property)
+            switch(property)
             {
                 case BooleanShaderProperty booleanProperty:
                     booleanProperty.value = ((ToggleData)newValue).isOn;
                     break;
                 case Vector1ShaderProperty vector1Property:
-                    vector1Property.value = (float)newValue;
+                    vector1Property.value = (float) newValue;
                     break;
                 case Vector2ShaderProperty vector2Property:
-                    vector2Property.value = (Vector2)newValue;
+                    vector2Property.value = (Vector2) newValue;
                     break;
                 case Vector3ShaderProperty vector3Property:
-                    vector3Property.value = (Vector3)newValue;
+                    vector3Property.value = (Vector3) newValue;
                     break;
                 case Vector4ShaderProperty vector4Property:
-                    vector4Property.value = (Vector4)newValue;
+                    vector4Property.value = (Vector4) newValue;
                     break;
                 case ColorShaderProperty colorProperty:
-                    colorProperty.value = (Color)newValue;
+                    colorProperty.value = (Color) newValue;
                     break;
                 case Texture2DShaderProperty texture2DProperty:
-                    texture2DProperty.value.texture = (Texture)newValue;
+                    texture2DProperty.value.texture = (Texture) newValue;
                     break;
                 case Texture2DArrayShaderProperty texture2DArrayProperty:
-                    texture2DArrayProperty.value.textureArray = (Texture2DArray)newValue;
+                    texture2DArrayProperty.value.textureArray = (Texture2DArray) newValue;
                     break;
                 case Texture3DShaderProperty texture3DProperty:
-                    texture3DProperty.value.texture = (Texture3D)newValue;
+                    texture3DProperty.value.texture = (Texture3D) newValue;
                     break;
                 case CubemapShaderProperty cubemapProperty:
-                    cubemapProperty.value.cubemap = (Cubemap)newValue;
+                    cubemapProperty.value.cubemap = (Cubemap) newValue;
                     break;
                 case Matrix2ShaderProperty matrix2Property:
-                    matrix2Property.value = (Matrix4x4)newValue;
+                    matrix2Property.value = (Matrix4x4) newValue;
                     break;
                 case Matrix3ShaderProperty matrix3Property:
-                    matrix3Property.value = (Matrix4x4)newValue;
+                    matrix3Property.value = (Matrix4x4) newValue;
                     break;
                 case Matrix4ShaderProperty matrix4Property:
-                    matrix4Property.value = (Matrix4x4)newValue;
+                    matrix4Property.value = (Matrix4x4) newValue;
                     break;
                 case SamplerStateShaderProperty samplerStateProperty:
-                    samplerStateProperty.value = (TextureSamplerState)newValue;
+                    samplerStateProperty.value = (TextureSamplerState) newValue;
                     break;
                 case GradientShaderProperty gradientProperty:
-                    gradientProperty.value = (Gradient)newValue;
+                    gradientProperty.value = (Gradient) newValue;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -324,23 +258,10 @@ namespace UnityEditor.ShaderGraph
         {
         }
 
-        public void UpdateDropdownEntries()
-        {
-        }
-
         public bool FindPort(SlotReference slot, out ShaderPort port)
         {
             port = output as ShaderPort;
             return port != null && port.slot.slotReference.Equals(slot);
-        }
-
-        void UpdateIcon()
-        {
-            var graph = node?.owner as GraphData;
-            if ((graph != null) && (property != null))
-                icon = (graph.isSubGraph || property.isExposed) ? exposedIcon : null;
-            else
-                icon = null;
         }
 
         public void OnModified(ModificationScope scope)
@@ -353,7 +274,13 @@ namespace UnityEditor.ShaderGraph
 
             if (scope == ModificationScope.Graph)
             {
-                UpdateIcon();
+                // changing the icon to be exposed or not
+                var propNode = (PropertyNode)node;
+                var graph = node.owner as GraphData;
+                var property = propNode.property;
+
+                var icon = property.generatePropertyBlock ? exposedIcon : null;
+                this.icon = icon;
             }
 
             if (scope == ModificationScope.Topological || scope == ModificationScope.Node)
@@ -401,23 +328,25 @@ namespace UnityEditor.ShaderGraph
         public void ClearMessage()
         {
             var badge = this.Q<IconBadge>();
-            if (badge != null)
+            if(badge != null)
             {
                 badge.Detach();
                 badge.RemoveFromHierarchy();
             }
         }
 
-        SGBlackboardRow GetAssociatedBlackboardRow()
+        BlackboardRow GetAssociatedBlackboardRow()
         {
             var graphView = GetFirstAncestorOfType<GraphEditorView>();
+            if (graphView == null)
+                return null;
 
-            var blackboardController = graphView?.blackboardController;
-            if (blackboardController == null)
+            var blackboardProvider = graphView.blackboardProvider;
+            if (blackboardProvider == null)
                 return null;
 
             var propNode = (PropertyNode)node;
-            return blackboardController.GetBlackboardRow(propNode.property);
+            return blackboardProvider.GetBlackboardRow(propNode.property);
         }
 
         void OnMouseHover(EventBase evt)
@@ -439,7 +368,7 @@ namespace UnityEditor.ShaderGraph
         public void Dispose()
         {
             var propRow = GetAssociatedBlackboardRow();
-            // If this node view is deleted, remove highlighting from associated blackboard row
+            // The associated blackboard row can be deleted in which case this property node view is also cleaned up with it, so we want to check for null
             if (propRow != null)
             {
                 propRow.RemoveFromClassList("hovered");

@@ -19,6 +19,7 @@ namespace UnityEditor.ShaderGraph
             name = "Exponential";
         }
 
+
         [SerializeField]
         private ExponentialBase m_ExponentialBase = ExponentialBase.BaseE;
 
@@ -52,7 +53,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(1, Binding.None)] out DynamicDimensionVector Out)
         {
             return
-@"
+                @"
 {
     Out = exp(In);
 }
@@ -64,7 +65,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(1, Binding.None)] out DynamicDimensionVector Out)
         {
             return
-@"
+                @"
 {
     Out = exp2(In);
 }

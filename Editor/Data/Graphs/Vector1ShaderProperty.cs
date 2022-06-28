@@ -18,9 +18,9 @@ namespace UnityEditor.ShaderGraph.Internal
         {
             displayName = "Float";
         }
-
+        
         public override PropertyType propertyType => PropertyType.Float;
-
+        
         internal override bool isExposable => true;
         internal override bool isRenamable => true;
 
@@ -32,18 +32,15 @@ namespace UnityEditor.ShaderGraph.Internal
                 {
                     return (int)base.value;
                 }
-
                 return base.value;
             }
-
             set => base.value = value;
         }
-
         string enumTagString
         {
             get
             {
-                switch (enumType)
+                switch(enumType)
                 {
                     case EnumType.CSharpEnum:
                         return $"[Enum({m_CSharpEnumType.ToString()})]";
@@ -61,20 +58,20 @@ namespace UnityEditor.ShaderGraph.Internal
             }
         }
 
-        internal override string GetHLSLVariableName(bool isSubgraphProperty, GenerationMode mode)
+        internal override string GetHLSLVariableName(bool isSubgraphProperty)
         {
             HLSLDeclaration decl = GetDefaultHLSLDeclaration();
             if (decl == HLSLDeclaration.HybridPerInstance)
                 return $"UNITY_ACCESS_HYBRID_INSTANCED_PROP({referenceName}, {concretePrecision.ToShaderString()})";
             else
-                return base.GetHLSLVariableName(isSubgraphProperty, mode);
+                return referenceName;
         }
 
         internal override string GetPropertyBlockString()
         {
             string valueString = NodeUtils.FloatToShaderValueShaderLabSafe(value);
 
-            switch (floatType)
+            switch(floatType)
             {
                 case FloatType.Slider:
                     return $"{hideTagString}{referenceName}(\"{displayName}\", Range({NodeUtils.FloatToShaderValueShaderLabSafe(m_RangeValues.x)}, {NodeUtils.FloatToShaderValueShaderLabSafe(m_RangeValues.y)})) = {valueString}";
@@ -87,9 +84,9 @@ namespace UnityEditor.ShaderGraph.Internal
             }
         }
 
-        internal override string GetPropertyAsArgumentString(string precisionString)
+        internal override string GetPropertyAsArgumentString()
         {
-            return $"{concreteShaderValueType.ToShaderString(precisionString)} {referenceName}";
+            return $"{concreteShaderValueType.ToShaderString(concretePrecision.ToShaderString())} {referenceName}";
         }
 
         internal override void ForeachHLSLProperty(Action<HLSLProperty> action)
@@ -123,7 +120,7 @@ namespace UnityEditor.ShaderGraph.Internal
             get => m_EnumType;
             set => m_EnumType = value;
         }
-
+    
         Type m_CSharpEnumType;
 
         public Type cSharpEnumType
@@ -133,7 +130,7 @@ namespace UnityEditor.ShaderGraph.Internal
         }
 
         List<string> m_EnumNames = new List<string>();
-
+        
         public List<string> enumNames
         {
             get => m_EnumNames;
@@ -147,7 +144,7 @@ namespace UnityEditor.ShaderGraph.Internal
             get => m_EnumValues;
             set => m_EnumValues = value;
         }
-
+        
         internal override AbstractMaterialNode ToConcreteNode()
         {
             switch (m_FloatType)
@@ -177,12 +174,16 @@ namespace UnityEditor.ShaderGraph.Internal
             return new Vector1ShaderProperty()
             {
                 displayName = displayName,
+                hidden = hidden,
                 value = value,
                 floatType = floatType,
                 rangeValues = rangeValues,
                 enumType = enumType,
                 enumNames = enumNames,
                 enumValues = enumValues,
+                precision = precision,
+                overrideHLSLDeclaration = overrideHLSLDeclaration,
+                hlslDeclarationOverride = hlslDeclarationOverride
             };
         }
 

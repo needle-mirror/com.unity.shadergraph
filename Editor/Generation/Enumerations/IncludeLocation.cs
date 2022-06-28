@@ -1,13 +1,9 @@
-using System;
-
-namespace UnityEditor.ShaderGraph
+﻿namespace UnityEditor.ShaderGraph
 {
     [GenerationAPI]
-    [Serializable]
     internal enum IncludeLocation
     {
         Pregraph,
-        Graph,
         Postgraph
     }
 }

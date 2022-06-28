@@ -10,6 +10,7 @@ namespace UnityEditor.ShaderGraph
             name = "Lerp";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_Lerp", BindingFlags.Static | BindingFlags.NonPublic);
@@ -22,7 +23,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(3, Binding.None)] out DynamicDimensionVector Out)
         {
             return
-@"
+                @"
 {
     Out = lerp(A, B, T);
 }";

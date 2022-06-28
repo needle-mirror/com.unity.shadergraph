@@ -1,11 +1,10 @@
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace UnityEditor.ShaderGraph
 {
     static class CreateShaderGraph
     {
-        [MenuItem("Assets/Create/Shader Graph/Blank Shader Graph", priority = CoreUtils.Sections.section1 +  CoreUtils.Priorities.assetsCreateShaderMenuPriority)]
+        [MenuItem("Assets/Create/Shader/Blank Shader Graph", false, 208)]
         public static void CreateBlankShaderGraph()
         {
             GraphUtil.CreateNewGraph();

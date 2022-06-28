@@ -136,12 +136,11 @@ namespace UnityEditor.ShaderGraph
             return m_HLSLProperties;
         }
 
-        public void GetPropertiesDeclaration(ShaderStringBuilder builder, GenerationMode mode, ConcretePrecision defaultPrecision)
+        public void GetPropertiesDeclaration(ShaderStringBuilder builder, GenerationMode mode, ConcretePrecision inheritedPrecision)
         {
             foreach (var prop in properties)
             {
-                // set up switched properties to use the inherited precision
-                prop.SetupConcretePrecision(defaultPrecision);
+                prop.ValidateConcretePrecision(inheritedPrecision);
             }
 
             // build a list of all HLSL properties
@@ -180,6 +179,7 @@ namespace UnityEditor.ShaderGraph
                     builder.AppendLine("#endif");
                 }
                 builder.AppendLine("CBUFFER_END");
+                builder.AppendLine("#define UNITY_ACCESS_HYBRID_INSTANCED_PROP(var, type) var");
                 return;
             }
 

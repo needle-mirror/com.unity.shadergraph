@@ -43,7 +43,6 @@ namespace UnityEditor.ShaderGraph
         {
             throw new InvalidOperationException($"{nameof(PooledList<T>)} must be disposed manually.");
         }
-
 #endif
     }
 }

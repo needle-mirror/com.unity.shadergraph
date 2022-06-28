@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "Normal Strength";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_NormalStrength", BindingFlags.Static | BindingFlags.NonPublic);
@@ -23,7 +24,7 @@ namespace UnityEditor.ShaderGraph
         {
             Out = Vector3.up;
             return
-@"
+                @"
 {
     Out = $precision3(In.rg * Strength, lerp(1, In.b, saturate(Strength)));
 }

@@ -120,7 +120,7 @@ namespace UnityEditor.ShaderGraph
             var graph = new GraphData();
             graph.AddContexts();
             graph.InitializeOutputs(m_Targets, m_Blocks);
-
+            
             graph.path = "Shader Graphs";
             FileUtilities.WriteShaderGraphToDisk(pathName, graph);
             AssetDatabase.Refresh();
@@ -202,7 +202,7 @@ namespace UnityEditor.ShaderGraph
         public static bool TryGetMetadataOfType<T>(this Shader shader, out T obj) where T : ScriptableObject
         {
             obj = null;
-            if (!shader.IsShaderGraphAsset())
+            if(!shader.IsShaderGraph())
                 return false;
 
             var path = AssetDatabase.GetAssetPath(shader);
@@ -218,23 +218,12 @@ namespace UnityEditor.ShaderGraph
             return false;
         }
 
-        // this will work on ALL shadergraph-built shaders, in memory or asset based
-        public static bool IsShaderGraph(this Material material)
-        {
-            var shaderGraphTag = material.GetTag("ShaderGraphShader", false, null);
-            return !string.IsNullOrEmpty(shaderGraphTag);
-        }
-
-        // NOTE: this ONLY works for ASSET based Shaders, if you created a temporary shader in memory, it won't work
-        public static bool IsShaderGraphAsset(this Shader shader)
+        public static bool IsShaderGraph(this Shader shader)
         {
             var path = AssetDatabase.GetAssetPath(shader);
             var importer = AssetImporter.GetAtPath(path);
             return importer is ShaderGraphImporter;
         }
-
-        [Obsolete("Use IsShaderGraphAsset instead", false)]
-        public static bool IsShaderGraph(this Shader shader) => shader.IsShaderGraphAsset();
 
         static void Visit(List<AbstractMaterialNode> outputList, Dictionary<string, AbstractMaterialNode> unmarkedNodes, AbstractMaterialNode node)
         {
@@ -300,12 +289,8 @@ namespace UnityEditor.ShaderGraph
         internal static string SanitizeName(IEnumerable<string> existingNames, string duplicateFormat, string name, string disallowedPatternRegex = "\"")
         {
             name = Regex.Replace(name, disallowedPatternRegex, "_");
-            return DeduplicateName(existingNames, duplicateFormat, name);
-        }
 
-        internal static string SanitizeCategoryName(string categoryName, string disallowedPatternRegex = "\"")
-        {
-            return Regex.Replace(categoryName, disallowedPatternRegex, "_");
+            return DeduplicateName(existingNames, duplicateFormat, name);
         }
 
         internal static string DeduplicateName(IEnumerable<string> existingNames, string duplicateFormat, string name)
@@ -404,7 +389,7 @@ namespace UnityEditor.ShaderGraph
                 p.EnableRaisingEvents = true;
                 p.Exited += (Object obj, EventArgs args) =>
                 {
-                    if (p.ExitCode != 0)
+                    if(p.ExitCode != 0)
                         Debug.LogWarningFormat("Unable to open {0}: Check external editor in preferences", filePath);
                 };
                 p.Start();

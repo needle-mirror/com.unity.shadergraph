@@ -11,6 +11,7 @@ namespace UnityEditor.ShaderGraph
             name = "Fog";
         }
 
+
         public override bool hasPreview { get { return false; } }
 
         protected override MethodInfo GetFunctionToConvert()
@@ -25,7 +26,7 @@ namespace UnityEditor.ShaderGraph
         {
             Color = Vector4.zero;
             return
-@"
+                @"
 {
     SHADERGRAPH_FOG(Position, Color, Density);
 }

@@ -77,5 +77,6 @@ namespace UnityEditor.Graphing.Util
             }
             return centroid;
         }
+
     }
 }

@@ -20,8 +20,6 @@ namespace UnityEditor.ShaderGraph
         [SerializeField]
         string[] m_Labels; // this can be null, which means fallback to k_LabelDefaults
 
-        bool m_Integer = false;
-
         static readonly string[] k_LabelDefaults = { "X", "Y" };
         string[] labels
         {
@@ -46,12 +44,10 @@ namespace UnityEditor.ShaderGraph
             ShaderStageCapability stageCapability = ShaderStageCapability.All,
             string label1 = null,
             string label2 = null,
-            bool hidden = false,
-            bool integer = false)
+            bool hidden = false)
             : base(slotId, displayName, shaderOutputName, slotType, stageCapability, hidden)
         {
             m_Value = value;
-            m_Integer = integer;
             if ((label1 != null) || (label2 != null))
             {
                 m_Labels = new[]
@@ -74,14 +70,7 @@ namespace UnityEditor.ShaderGraph
 
         public override VisualElement InstantiateControl()
         {
-            if (m_Integer)
-            {
-                return new MultiIntegerSlotControlView(owner, labels, () => value, (newValue) => value = newValue);
-            }
-            else
-            {
-                return new MultiFloatSlotControlView(owner, labels, () => value, (newValue) => value = newValue);
-            }
+            return new MultiFloatSlotControlView(owner, labels, () => value, (newValue) => value = newValue);
         }
 
         protected override string ConcreteSlotValueAsVariable()

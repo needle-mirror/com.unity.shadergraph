@@ -30,6 +30,7 @@ namespace UnityEditor.ShaderGraph.Drawing
             RegisterCallback<CustomStyleResolvedEvent>(OnCustomStyleResolved);
         }
 
+
         public void UpdateClasses(ConcreteSlotValueType outputType, ConcreteSlotValueType inputType)
         {
             ClearClassList();

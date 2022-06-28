@@ -9,6 +9,8 @@ namespace UnityEditor.ShaderGraph.Serialization
     [Serializable]
     public class JsonObject : ISerializationCallbackReceiver
     {
+
+
         public virtual int latestVersion { get; } = 0;
 
         [SerializeField]
@@ -70,18 +72,16 @@ namespace UnityEditor.ShaderGraph.Serialization
         public virtual string Serialize() { return EditorJsonUtility.ToJson(this, true); }
         public virtual void Deserailize(string typeInfo, string jsonData) { EditorJsonUtility.FromJsonOverwrite(jsonData, this); }
 
-        public virtual void OnBeforeSerialize() {}
+        public virtual void OnBeforeSerialize() { }
 
-        public virtual void OnBeforeDeserialize() {}
+        public virtual void OnAfterDeserialize() { }
 
-        public virtual void OnAfterDeserialize() {}
+        public virtual void OnAfterDeserialize(string json) { }
 
-        public virtual void OnAfterDeserialize(string json) {}
-
-        public virtual void OnAfterMultiDeserialize(string json) {}
-
+        public virtual void OnAfterMultiDeserialize(string json) { }
+        
         internal static Guid GenerateNamespaceUUID(string Namespace, string Name)
-        {
+        {            
             Guid namespaceGuid;
             if (!Guid.TryParse(Namespace, out namespaceGuid))
             {

@@ -5,7 +5,6 @@ using UnityEngine;
 using UnityEditor.Graphing;
 using UnityEditor.ShaderGraph.Drawing.Controls;
 using UnityEditor.Graphing.Util;
-using UnityEngine.Pool;
 
 namespace UnityEditor.ShaderGraph
 {
@@ -35,6 +34,7 @@ namespace UnityEditor.ShaderGraph
             name = "Matrix Split";
             UpdateNodeAfterDeserialization();
         }
+
 
         [SerializeField]
         MatrixAxis m_Axis;
@@ -230,7 +230,7 @@ namespace UnityEditor.ShaderGraph
                     }
                 }
 
-                if (outputSlots.Any(x => x.hasError))
+                if(outputSlots.Any(x => x.hasError))
                 {
                     owner.AddConcretizationError(objectId, string.Format("Node {0} had output error", objectId));
                     hasError = true;

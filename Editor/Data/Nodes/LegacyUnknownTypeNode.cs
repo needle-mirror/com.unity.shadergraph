@@ -27,7 +27,6 @@ namespace UnityEditor.ShaderGraph
             serializedData = null;
             isValid = false;
         }
-
         public LegacyUnknownTypeNode(string typeData, string serializedNodeData) : base()
         {
             serializedType = typeData;
@@ -38,6 +37,7 @@ namespace UnityEditor.ShaderGraph
         public override void OnAfterDeserialize(string json)
         {
             base.OnAfterDeserialize(json);
+            
         }
 
         public override void ValidateNode()
@@ -47,3 +47,4 @@ namespace UnityEditor.ShaderGraph
         }
     }
 }
+

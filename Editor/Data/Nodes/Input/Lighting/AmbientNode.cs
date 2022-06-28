@@ -21,6 +21,7 @@ namespace UnityEditor.ShaderGraph
             UpdateNodeAfterDeserialization();
         }
 
+
         public sealed override void UpdateNodeAfterDeserialization()
         {
             AddSlot(new ColorRGBMaterialSlot(OutputSlotId, kOutputSlotName, kOutputSlotName, SlotType.Output, Vector4.zero, ColorMode.Default));

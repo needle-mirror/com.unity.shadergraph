@@ -13,6 +13,7 @@ namespace UnityEditor.ShaderGraph.Drawing
         Dictionary<Resizer, VisualElement> m_Resizers = new Dictionary<Resizer, VisualElement>();
 
         List<Manipulator> m_Manipulators = new List<Manipulator>();
+
         public ResizableElement() : this("uxml/Resizable")
         {
             pickingMode = PickingMode.Ignore;
@@ -39,17 +40,17 @@ namespace UnityEditor.ShaderGraph.Drawing
             }
 
             foreach (Resizer vertical in new[] {Resizer.Top, Resizer.Bottom})
-                foreach (Resizer horizontal in new[] {Resizer.Left, Resizer.Right})
+            foreach (Resizer horizontal in new[] {Resizer.Left, Resizer.Right})
+            {
+                VisualElement resizer = this.Q(vertical.ToString().ToLower() + "-" + horizontal.ToString().ToLower() + "-resize");
+                if (resizer != null)
                 {
-                    VisualElement resizer = this.Q(vertical.ToString().ToLower() + "-" + horizontal.ToString().ToLower() + "-resize");
-                    if (resizer != null)
-                    {
-                        var manipulator = new ElementResizer(this, vertical | horizontal);
-                        resizer.AddManipulator(manipulator);
-                        m_Manipulators.Add(manipulator);
-                    }
-                    m_Resizers[vertical | horizontal] = resizer;
+                    var manipulator = new ElementResizer(this, vertical | horizontal);
+                    resizer.AddManipulator(manipulator);
+                    m_Manipulators.Add(manipulator);
                 }
+                m_Resizers[vertical | horizontal] = resizer;
+            }
         }
 
         public void SetResizeRules(Resizer allowedResizeDirections)

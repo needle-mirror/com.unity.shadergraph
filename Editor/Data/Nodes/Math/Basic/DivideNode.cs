@@ -10,6 +10,7 @@ namespace UnityEditor.ShaderGraph
             name = "Divide";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_Divide", BindingFlags.Static | BindingFlags.NonPublic);

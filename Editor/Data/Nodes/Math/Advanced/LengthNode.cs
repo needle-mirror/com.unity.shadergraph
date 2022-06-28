@@ -10,6 +10,7 @@ namespace UnityEditor.ShaderGraph
             name = "Length";
         }
 
+
         protected override MethodInfo GetFunctionToConvert()
         {
             return GetType().GetMethod("Unity_Length", BindingFlags.Static | BindingFlags.NonPublic);
@@ -20,7 +21,7 @@ namespace UnityEditor.ShaderGraph
             [Slot(1, Binding.None)] out Vector1 Out)
         {
             return
-@"
+                @"
 {
     Out = length(In);
 }
